@@ -1,0 +1,371 @@
+.excel-reference-view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 12px;
+  flex: 1;
+  height: auto;
+}
+.excel-reference-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-shrink: 0;
+}
+.excel-reference-heading h1 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+.excel-reference-heading p,
+.excel-reference-muted {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.excel-reference-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--accent);
+  padding: 4px 8px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.excel-reference-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.excel-reference-period select,
+.excel-reference-toolbar select,
+.excel-reference-toolbar input {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--input);
+  border-radius: 7px;
+  background: white;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.excel-reference-period small {
+  flex: 1 1 220px;
+  color: var(--muted-foreground);
+  text-align: right;
+}
+.excel-reference-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  flex-shrink: 0;
+}
+.excel-reference-kpis article {
+  min-width: 0;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.excel-reference-kpis article p {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.excel-reference-kpis article strong {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-top: 7px;
+  font-size: clamp(17px, 1.8vw, 26px);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+.excel-reference-kpis article small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.excel-reference-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 20px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.excel-reference-summary strong {
+  font-variant-numeric: tabular-nums;
+}
+.excel-reference-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+}
+.excel-reference-panel-heading,
+.excel-reference-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.excel-reference-panel-heading h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.excel-reference-panel-heading > div:first-child {
+  min-width: 0;
+}
+.excel-reference-panel-heading small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.excel-reference-toolbar {
+  justify-content: flex-start;
+  font-size: 12px;
+  background: var(--muted);
+}
+.excel-reference-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.excel-reference-toolbar input {
+  width: 240px;
+}
+.excel-reference-source {
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.excel-reference-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.excel-reference-tabs button {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 10px;
+  background: white;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.excel-reference-tabs button[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: var(--accent);
+  color: var(--primary);
+  font-weight: 600;
+}
+.excel-reference-scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  max-height: 60dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.excel-reference-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.excel-reference-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  padding: 10px 13px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+.excel-reference-table td {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.excel-reference-table tr:last-child td {
+  border-bottom: 0;
+}
+.excel-reference-table td.numeric {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.excel-reference-table tr[data-kind='sales'],
+.excel-reference-table tr[data-kind='finance'],
+.excel-reference-table tr[data-kind='bridge_total'] {
+  background: var(--accent);
+  font-weight: 600;
+}
+.excel-reference-table tr[data-kind='check'] {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.excel-reference-row-button {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.excel-reference-row-button svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.excel-reference-footer {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 14px;
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.excel-reference-footer > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.excel-reference-notice {
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+.excel-reference-notice[data-warning='true'] {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+.excel-reference-empty {
+  margin: auto;
+  padding: 30px 20px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.excel-reference-technical {
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+.excel-reference-technical > summary {
+  width: fit-content;
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--primary);
+}
+.excel-reference-technical[open] {
+  flex-shrink: 0;
+  max-height: 260px;
+  overflow: auto;
+}
+.excel-reference-chart {
+  min-width: 1100px;
+  width: 100%;
+  height: 300px;
+}
+.excel-reference-chart text {
+  fill: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 10px;
+}
+.excel-reference-definitions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.excel-reference-definitions div {
+  min-width: 0;
+}
+.excel-reference-definitions dt {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.excel-reference-definitions dd {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.excel-reference-status {
+  display: inline-block;
+  max-width: 180px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  background: var(--warning-subtle);
+  color: var(--warning);
+  font-size: 11px;
+}
+@media (min-width: 1200px) and (min-height: 680px) {
+  .excel-reference-view.viewport-workspace {
+    height: auto;
+  }
+  .excel-reference-scroll {
+    max-height: none;
+  }
+}
+@media (max-width: 767px) {
+  .excel-reference-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .excel-reference-kpis article strong {
+    font-size: 20px;
+  }
+  .excel-reference-period small {
+    text-align: left;
+  }
+  .excel-reference-toolbar label {
+    width: 100%;
+  }
+  .excel-reference-toolbar input {
+    flex: 1;
+    width: auto;
+  }
+  .excel-reference-definitions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

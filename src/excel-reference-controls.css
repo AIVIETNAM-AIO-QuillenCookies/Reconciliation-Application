@@ -1,0 +1,172 @@
+.excel-source-banner {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  background: var(--accent);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.excel-source-identity {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--primary);
+}
+.excel-source-identity strong {
+  white-space: nowrap;
+}
+.excel-source-filename {
+  min-width: 0;
+  max-width: 270px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+.excel-source-basis {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.excel-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.excel-source-actions button {
+  white-space: normal;
+  height: auto;
+  min-height: 28px;
+  font-size: 11px;
+}
+.excel-reference-source-details {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--accent);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.excel-reference-source-details h3 {
+  font-weight: 600;
+}
+.excel-reference-source-details p {
+  margin-top: 5px;
+}
+.excel-reference-dialog {
+  max-width: 840px;
+  gap: 0;
+}
+.excel-reference-dialog > header {
+  padding: 20px 60px 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.excel-reference-dialog header p {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.excel-reference-dialog-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.excel-reference-file {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.excel-reference-file p,
+.excel-reference-steps p {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-top: 3px;
+  line-height: 1.6;
+}
+.excel-reference-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.excel-reference-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.excel-reference-steps li > svg {
+  flex-shrink: 0;
+}
+.excel-reference-dialog footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.excel-reference-dialog footer button {
+  white-space: normal;
+  height: auto;
+  min-height: 32px;
+}
+.excel-reference-technical {
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.excel-reference-technical summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.excel-reference-outlet {
+  min-width: 0;
+  min-height: 0;
+}
+@media (min-width: 1100px) and (min-height: 680px) {
+  .app-main.excel-source-main {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 56px);
+    overflow: hidden;
+  }
+  .excel-reference-outlet {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .excel-reference-outlet > .viewport-workspace {
+    height: auto;
+    flex: 1;
+  }
+}
+@media (max-width: 479px) {
+  .excel-reference-dialog-body {
+    padding: 12px;
+  }
+  .excel-source-actions {
+    width: 100%;
+  }
+}

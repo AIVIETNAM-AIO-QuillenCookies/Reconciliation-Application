@@ -1,0 +1,155 @@
+﻿.mw-print-document {
+  display: none;
+}
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 13mm 17mm;
+  }
+  :root {
+    color-scheme: light;
+  }
+  body {
+    min-width: 0 !important;
+    background: white !important;
+    color: #17251e;
+  }
+  .app-sidebar,
+  .app-header,
+  .app-footer,
+  .mw-inspector-drawer,
+  [data-slot='dialog-overlay'],
+  [data-slot='sheet-overlay'] {
+    display: none !important;
+  }
+  .app-main {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .app-sidebar + div {
+    padding-left: 0 !important;
+  }
+  .mw-workspace,
+  .mw-workspace.mw-presentation {
+    display: block;
+    position: static;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+    background: white;
+  }
+  .mw-workspace > :not(.mw-print-document) {
+    display: none !important;
+  }
+  .mw-print-document {
+    display: block !important;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 9pt;
+    line-height: 1.5;
+    color: #17251e;
+  }
+  .mw-print-document header {
+    padding-bottom: 10mm;
+    border-bottom: 1.5pt solid #34785a;
+    margin-bottom: 7mm;
+  }
+  .mw-print-brand {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #34785a;
+    margin-bottom: 4mm;
+  }
+  .mw-print-document h1 {
+    font-size: 24pt;
+    font-weight: 650;
+    margin-bottom: 4mm;
+  }
+  .mw-print-document h2 {
+    font-size: 15pt;
+    font-weight: 650;
+    color: #122f26;
+    padding-bottom: 2mm;
+    margin: 8mm 0 4mm;
+    border-bottom: 0.5pt solid #dfe6df;
+    break-after: avoid;
+  }
+  .mw-print-document h3 {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 4mm 0 2mm;
+    break-after: avoid;
+  }
+  .mw-print-document h4 {
+    font-size: 10pt;
+    font-weight: 600;
+    margin: 3mm 0 1mm;
+  }
+  .mw-print-document p {
+    margin: 1.5mm 0;
+    overflow-wrap: anywhere;
+  }
+  .mw-print-document ul {
+    padding-left: 5mm;
+    list-style: disc;
+  }
+  .mw-print-document pre,
+  .mw-print-document code {
+    font-family: Consolas, monospace;
+    font-size: 8pt;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .mw-print-document pre {
+    padding: 3mm;
+    border: 0.5pt solid #dfe6df;
+    border-radius: 2mm;
+    margin: 2mm 0;
+  }
+  .mw-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 8pt;
+    margin: 3mm 0;
+  }
+  .mw-print-table thead {
+    display: table-header-group;
+  }
+  .mw-print-table th {
+    background: #e9f3ec;
+    font-weight: 600;
+    text-align: left;
+  }
+  .mw-print-table th,
+  .mw-print-table td {
+    border: 0.5pt solid #dfe6df;
+    padding: 2mm;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .mw-print-table tr {
+    break-inside: avoid;
+  }
+  .mw-print-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mw-print-rule {
+    margin-bottom: 5mm;
+  }
+  .mw-print-muted {
+    font-size: 8pt;
+    color: #607067;
+  }
+  .mw-print-document footer {
+    margin-top: 8mm;
+    padding-top: 3mm;
+    border-top: 0.5pt solid #dfe6df;
+    color: #607067;
+    font-size: 8pt;
+  }
+}

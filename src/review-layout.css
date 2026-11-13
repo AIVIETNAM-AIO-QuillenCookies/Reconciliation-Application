@@ -1,0 +1,24 @@
+/* Both review pages consume the space below the stable application header. */
+.review-workspace-main {
+  min-width: 0;
+  min-height: 0;
+}
+@media (min-width: 1024px) and (min-height: 600px) {
+  .review-workspace-main {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 56px);
+  }
+  .review-workspace-main > .accounting-workspace,
+  .review-workspace-main > .exception-page {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+}
+@media (max-width: 1023px), (max-height: 599px) {
+  .exception-table-scroll,
+  .accounting-exception-cases .case-list {
+    max-height: 65dvh;
+  }
+}

@@ -1,0 +1,404 @@
+[
+  {
+    "file": "src/components/LocalizedError.tsx",
+    "line": 6,
+    "s": "Chẩn đoán kỹ thuật",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/LocalizedError.tsx",
+    "line": 13,
+    "s": "Xem thông tin xử lý gốc trong phần chẩn đoán bên dưới.",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/LocalizedError.tsx",
+    "line": 13,
+    "s": "Chẩn đoán kỹ thuật",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/hooks/useDuckDB.tsx",
+    "line": 64,
+    "s": "useDuckDB must be used inside DuckDBProvider.",
+    "p": "NewExpression"
+  },
+  {
+    "file": "src/pages/Dashboard.tsx",
+    "line": 97,
+    "s": "Not defined for zero Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/pages/Dashboard.tsx",
+    "line": 98,
+    "s": "Variance / Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/pages/Dashboard.tsx",
+    "line": 104,
+    "s": "All",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/Dashboard.tsx",
+    "line": 186,
+    "s": "USD",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 24,
+    "s": "Receipt lines, discounts and duplicate exports.",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 25,
+    "s": "Orders, deliveries, cancellations and returns.",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 26,
+    "s": "Signed revenue journals from your finance ledger.",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 27,
+    "s": "Monthly gross revenue. The bridge starts here.",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 28,
+    "s": "Store, calendar and FX reference worksheets.",
+    "p": "Property"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 142,
+    "s": " +{0} more",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/pages/DataIngestion.tsx",
+    "line": 192,
+    "s": "CSV / XLSX",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/pages/Methodology.tsx",
+    "line": 39,
+    "s": "All",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/pages/Methodology.tsx",
+    "line": 90,
+    "s": "(max-width: 1099px)",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/pages/Methodology.tsx",
+    "line": 101,
+    "s": "(max-width: 1099px)",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/pages/Methodology.tsx",
+    "line": 114,
+    "s": "All",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/pages/Methodology.tsx",
+    "line": 268,
+    "s": "Chi tiết chỉ xem của đối tượng đang chọn.",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/pages/Settings.tsx",
+    "line": 32,
+    "s": "DuckDB-WASM",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 81,
+    "s": "All",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 113,
+    "s": "All",
+    "p": "CallExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 294,
+    "s": "All",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 313,
+    "s": "|Δ| &gt;",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 490,
+    "s": "Reference",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 491,
+    "s": "Store",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 492,
+    "s": "Posting / event date",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/ExceptionLog.tsx",
+    "line": 493,
+    "s": "Source − GL",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/WaterfallChart.tsx",
+    "line": 175,
+    "s": "Flash / GL totals",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/WaterfallChart.tsx",
+    "line": 176,
+    "s": "Increase (+)",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/WaterfallChart.tsx",
+    "line": 177,
+    "s": "Reduction (−)",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/dashboard/WaterfallChart.tsx",
+    "line": 178,
+    "s": "Unexplained residual",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/DataMappingView.tsx",
+    "line": 225,
+    "s": "e.g. {0}",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 24,
+    "s": "Choose…",
+    "p": "AssignmentPattern"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 817,
+    "s": "Role / sheet",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 818,
+    "s": "Header",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 819,
+    "s": "Join keys (AND)",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 820,
+    "s": "Returned fields / use",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/MasterDataConfigurator.tsx",
+    "line": 821,
+    "s": "Validation",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/ingestion/OnboardingWizard.tsx",
+    "line": 520,
+    "s": " · {0} columns{1}",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/layout/AppLayout.tsx",
+    "line": 50,
+    "s": "reconcile",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/layout/AppLayout.tsx",
+    "line": 55,
+    "s": "FW",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/layout/AppLayout.tsx",
+    "line": 181,
+    "s": "FW",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/layout/AppLayout.tsx",
+    "line": 210,
+    "s": "reconcile.",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 165,
+    "s": "All",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 165,
+    "s": "Flash",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 167,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 167,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 167,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/EvidenceTable.tsx",
+    "line": 277,
+    "s": "NULL",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 160,
+    "s": "ArrowLeft",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 160,
+    "s": "ArrowRight",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 160,
+    "s": "ArrowUp",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 160,
+    "s": "ArrowDown",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 234,
+    "s": "Flash",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 234,
+    "s": "Dim",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineCanvas.tsx",
+    "line": 235,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/PipelineNode.tsx",
+    "line": 86,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/RuleBrowser.tsx",
+    "line": 68,
+    "s": "Flash",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/RuleBrowser.tsx",
+    "line": 68,
+    "s": "Dim",
+    "p": "ArrayExpression"
+  },
+  {
+    "file": "src/components/methodology/RuleBrowser.tsx",
+    "line": 69,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/RuleBrowser.tsx",
+    "line": 115,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/SelectionInspector.tsx",
+    "line": 217,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/SelectionInspector.tsx",
+    "line": 346,
+    "s": "Sales Flash",
+    "p": "ConditionalExpression"
+  },
+  {
+    "file": "src/components/methodology/SelectionInspector.tsx",
+    "line": 427,
+    "s": "NULL",
+    "p": "JSXElement"
+  },
+  {
+    "file": "src/components/ui/sheet.tsx",
+    "line": 2,
+    "s": "use client",
+    "p": "ExpressionStatement"
+  }
+]

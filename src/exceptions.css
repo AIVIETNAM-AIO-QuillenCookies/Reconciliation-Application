@@ -1,0 +1,668 @@
+.exception-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  color: var(--foreground);
+}
+.exception-page > .run-failure-notice {
+  flex: 0 0 auto;
+  max-height: min(36vh, 280px);
+  overflow: auto;
+}
+.exception-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.exception-page-heading > div {
+  min-width: 0;
+}
+.exception-page-heading p {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted-foreground);
+}
+.exception-page-heading h1 {
+  margin-top: 3px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+}
+.exception-heading-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.exception-guide {
+  position: relative;
+}
+.exception-guide > summary {
+  cursor: pointer;
+  color: var(--primary);
+}
+.exception-guide > div {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  z-index: 30;
+  width: min(400px, calc(100vw - 40px));
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 8px 30px #102c2020;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.exception-guide p + p {
+  margin-top: 10px;
+}
+.exception-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+}
+.exception-workspace-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.exception-workspace-tabs > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  position: relative;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exception-workspace-tabs > button[aria-selected='true'] {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+.exception-workspace-tabs > button > span {
+  min-width: 21px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.exception-workspace-tabs small {
+  font-weight: 400;
+  font-size: 11px;
+}
+.exception-tab-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0;
+}
+.exception-tab-panel[hidden] {
+  display: none;
+}
+.exception-tab-panel > .accounting-exception-cases {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 14px 16px;
+}
+.exception-tab-panel .accounting-exception-cases .case-list {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+.exception-empty-state {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+.exception-empty-state h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.exception-empty-state p {
+  max-width: 520px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+.exception-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+.exception-loading > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.exception-mapping-notes {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.exception-mapping-notes > summary {
+  cursor: pointer;
+}
+.exception-mapping-notes aside {
+  max-height: 200px;
+  overflow: auto;
+  margin: 8px 0 0;
+}
+.exception-data {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.exception-summary {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  background: #f6faf7;
+}
+.exception-summary strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+.exception-summary small {
+  color: var(--muted-foreground);
+  font-size: inherit;
+}
+.exception-toolbar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px 6px;
+  min-width: 0;
+}
+.exception-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  max-width: 400px;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fafbfa;
+  padding: 0 9px;
+  color: var(--muted-foreground);
+}
+.exception-search > svg {
+  flex: 0 0 auto;
+}
+.exception-search input {
+  min-width: 0;
+  width: 100%;
+  outline: 0;
+  font-size: 12px;
+  background: transparent;
+  color: var(--foreground);
+}
+.exception-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.exception-search button {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.exception-search:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.exception-filter {
+  max-width: 100%;
+  min-width: 0;
+}
+.exception-filter select,
+.exception-more-filters select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  padding: 7px 10px;
+  font-size: 12px;
+  height: 34px;
+  color: var(--foreground);
+}
+.exception-more-filters {
+  position: relative;
+  min-width: 0;
+  font-size: 12px;
+}
+.exception-more-filters summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  height: 34px;
+  list-style: none;
+}
+.exception-more-filters summary::-webkit-details-marker {
+  display: none;
+}
+.exception-more-filters > div {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  z-index: 25;
+  width: min(280px, calc(100vw - 40px));
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 6px 25px #102c2020;
+}
+.exception-more-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exception-more-filters p {
+  margin-top: 10px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.exception-filter-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.exception-export {
+  margin-left: auto;
+}
+.exception-filter-scope {
+  padding: 0 16px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.exception-table-shell {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  container-type: inline-size;
+}
+.exception-table-scroll {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.exception-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.exception-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 44px;
+  padding: 8px 10px;
+  border-block: 1px solid var(--border);
+  background: #f1f5f2;
+  text-align: left;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: normal;
+}
+.exception-table th:first-child,
+.exception-table td:first-child {
+  padding-left: 16px;
+}
+.exception-table th button {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  cursor: pointer;
+  white-space: normal;
+  text-align: inherit;
+}
+.exception-table th button svg {
+  flex: 0 0 auto;
+}
+.exception-table td {
+  padding: 12px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.exception-table tbody tr:hover td {
+  background: #f6faf7;
+}
+.exception-table tbody tr.is-selected td,
+.exception-detail-row td {
+  background: #edf5ef;
+}
+.exception-table td > strong {
+  display: block;
+  font-weight: 500;
+}
+.exception-table td small,
+.exception-table time {
+  display: block;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.exception-table .exception-money {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-variant-numeric: tabular-nums;
+}
+.exception-money.is-negative {
+  color: var(--destructive);
+}
+.exception-value-cell,
+.exception-value-heading {
+  text-align: right !important;
+}
+.exception-value-heading button {
+  justify-content: flex-end;
+  width: 100%;
+}
+.exception-value-heading button + button {
+  margin-top: 3px;
+  font-size: 10px;
+}
+.exception-issue-button {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.exception-issue-button > svg {
+  margin-top: 3px;
+  flex: 0 0 auto;
+  transition: transform 0.15s;
+}
+.exception-issue-button > span {
+  min-width: 0;
+}
+.exception-issue-button strong {
+  font-weight: 600;
+}
+.exception-issue-button small {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: clip;
+}
+.exception-issue-cell [data-slot='badge'] {
+  margin: 7px 0 0 19px;
+  max-width: calc(100% - 19px);
+  font-size: 11px;
+  white-space: normal;
+}
+.exception-case-link {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 500;
+}
+.exception-case-link:hover {
+  text-decoration: underline;
+}
+.exception-table .accounting-pill {
+  white-space: normal;
+  font-size: 12px;
+  max-width: 100%;
+}
+.exception-table .accounting-pill.is-stale {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+.exception-action-cell {
+  padding-right: 10px !important;
+  padding-left: 0 !important;
+  text-align: right;
+}
+.exception-action-cell > button {
+  max-width: 100%;
+}
+.exception-detail {
+  border-left: 2px solid var(--primary);
+  padding-left: 12px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.exception-detail > p + p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.exception-detail span {
+  overflow-wrap: anywhere;
+}
+.exception-empty {
+  height: 220px;
+  text-align: center;
+  vertical-align: middle !important;
+  color: var(--muted-foreground);
+}
+.exception-empty p {
+  margin-top: 8px;
+}
+.exception-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.exception-footer > p {
+  margin-right: auto;
+}
+.exception-footer label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.exception-footer select {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: white;
+  font-size: 11px;
+}
+.exception-announcement,
+.exception-sample {
+  padding: 8px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--primary);
+}
+.exception-cell-label {
+  display: none;
+}
+.exception-table-scroll:focus-visible,
+.exception-page button:focus-visible,
+.exception-page summary:focus-visible,
+.exception-data button:focus-visible,
+.exception-data select:focus-visible,
+.exception-data a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+@container (max-width: 680px) {
+  .exception-table,
+  .exception-table tbody {
+    display: block;
+  }
+  .exception-table colgroup,
+  .exception-table thead {
+    display: none;
+  }
+  .exception-table tbody > tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    position: relative;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .exception-table td {
+    min-width: 0;
+    border: 0;
+    padding: 6px 4px !important;
+  }
+  .exception-table .exception-issue-cell {
+    grid-column: 1 / -1;
+    padding-right: 36px !important;
+  }
+  .exception-issue-cell [data-slot='badge'] {
+    margin-top: 5px;
+  }
+  .exception-table .exception-action-cell {
+    position: absolute;
+    top: 14px;
+    right: 10px;
+    width: 32px;
+  }
+  .exception-table .exception-value-cell {
+    text-align: left !important;
+  }
+  .exception-cell-label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted-foreground);
+    margin-bottom: 4px;
+  }
+  .exception-detail-row td,
+  .exception-table .exception-empty {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1023px), (max-height: 599px) {
+  .exception-page {
+    height: auto;
+  }
+  .exception-workspace,
+  .exception-tab-panel,
+  .exception-data,
+  .exception-table-shell {
+    flex-basis: auto;
+  }
+  .exception-table-scroll {
+    height: auto;
+  }
+}
+@media (max-width: 700px) {
+  .exception-page-heading {
+    align-items: flex-start;
+  }
+  .exception-page-heading h1 {
+    font-size: 21px;
+  }
+  .exception-heading-tools {
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 11px;
+  }
+  .exception-workspace-tabs {
+    gap: 16px;
+    padding-inline: 12px;
+  }
+  .exception-workspace-tabs > button {
+    font-size: 12px;
+  }
+  .exception-workspace-tabs small {
+    display: none;
+  }
+  .exception-summary {
+    gap: 6px 16px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  .exception-toolbar {
+    padding-inline: 12px;
+  }
+  .exception-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .exception-filter-scope {
+    padding-inline: 12px;
+  }
+  .exception-footer {
+    padding: 8px 12px;
+  }
+  .exception-footer label > span {
+    display: none;
+  }
+}
