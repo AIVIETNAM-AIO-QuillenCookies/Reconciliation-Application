@@ -8,6 +8,8 @@ Chọn **Tắt xem thử · Quay lại xử lý Raw** trên thanh thông báo đ
 
 `public/reference/excel-reference.xlsx` là bản sao nguyên file `bang-cau-noi&nhat-ki-ngoai-le (1).xlsx` tìm thấy trong Downloads khi triển khai. Đây là dữ liệu tài chính của workbook, được phục vụ cùng ứng dụng cục bộ.
 
+Ngày 13/11/2026, người dùng xác nhận giữ workbook này để làm demo công khai trên bản deploy. File trong `public` được chép vào `dist/reference` và mọi người có thể tải; file upload của khách truy cập vẫn chỉ nằm trong phiên trình duyệt.
+
 - `Cau_noi`: 15 dòng, 12 tháng năm 2025. Cột Cả năm chỉ dùng đối chiếu, không cộng lại vào 12 tháng.
 - `Nhat_ky_ngoai_le`: 10 ngoại lệ. EX-05 vẫn là **Cần chứng từ**; dữ liệu này chỉ đọc và tách biệt với các hồ sơ Raw.
 - `Chi_tiet`: 39.062 bản ghi, bỏ dòng trống và 11 tiêu đề bảng lặp. Giữ số dòng Excel vật lý và toàn bộ cột nguồn, kể cả các cách tính USD khác nhau.

@@ -596,8 +596,10 @@ test('real-engine shared store keeps review decisions and exceptions in one snap
     notes: 'Chờ Finance xác nhận',
     owner: 'Finance Ops',
     status: 'reviewed',
+    evidence: 'Bảng kê trước đó đã được rà soát.',
+    evidenceReviewed: true,
   })
-  store.actions.requestReviewEvidence([reviewCase.id])
+  assert.equal(store.actions.requestReviewEvidence([reviewCase.id]), 1)
   assert.equal(
     runs,
     originalRuns,
@@ -605,10 +607,41 @@ test('real-engine shared store keeps review decisions and exceptions in one snap
   )
   assert.strictEqual(store.getState().reconciliationData, before)
   assert.equal(store.getState().reviewCases[0].status, 'in_progress')
+  assert.equal(store.getState().reviewCases[0].evidenceReviewed, false)
   assert.equal(
     store.getState().reviewCases[0].history.at(-1).action,
     'evidence_requested',
   )
+  const requested = store.getState()
+  assert.equal(store.actions.requestReviewEvidence([reviewCase.id]), 0)
+  assert.strictEqual(store.getState(), requested)
+  store.actions.updateReviewCase(reviewCase.id, {
+    notes: 'Finance đang tìm chứng từ bổ sung.',
+    nextStep: 'Finance gửi bảng kê ngày mai.',
+  })
+  const withNotes = store.getState()
+  assert.equal(store.actions.requestReviewEvidence([reviewCase.id]), 0)
+  assert.strictEqual(store.getState(), withNotes)
+  assert.equal(
+    store
+      .getState()
+      .reviewCases[0].history.filter(
+        (entry) => entry.action === 'evidence_requested',
+      ).length,
+    1,
+  )
+  assert.equal(
+    store.getState().reviewCases[0].nextStep,
+    'Finance gửi bảng kê ngày mai.',
+  )
+  store.actions.updateReviewCase(reviewCase.id, { status: 'reviewed' })
+  store.actions.updateReviewCase(reviewCase.id, { status: 'in_progress' })
+  assert.equal(
+    store.actions.requestReviewEvidence([reviewCase.id]),
+    1,
+    'a completed request does not suppress a new request after the case reopens',
+  )
+  assert.equal(runs, originalRuns)
   assert.throws(
     () =>
       store.actions.applyGLCorrection(record.id, { amountCents: -130000 }, ''),

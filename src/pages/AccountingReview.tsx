@@ -1162,9 +1162,11 @@ function RecordInspector({
               size="sm"
               disabled={store.isProcessing}
               onClick={() => {
-                store.requestReviewEvidence([reviewCase.id])
+                const created = store.requestReviewEvidence([reviewCase.id])
                 setMessage(
-                  'Đã tạo yêu cầu chứng từ trong phiên, không gửi email.',
+                  created
+                    ? 'Đã tạo yêu cầu chứng từ trong phiên, không gửi email.'
+                    : 'Hồ sơ đã có yêu cầu chứng từ đang chờ xử lý trong phiên.',
                 )
               }}
             >
@@ -1712,9 +1714,11 @@ function RawAccountingReview() {
                     size="sm"
                     disabled={store.isProcessing}
                     onClick={() => {
-                      store.requestReviewEvidence(bulkCases)
+                      const created = store.requestReviewEvidence(bulkCases)
                       setBulkMessage(
-                        `Đã tạo yêu cầu chứng từ cho ${bulkCases.length} hồ sơ trong phiên.`,
+                        created
+                          ? `Đã tạo yêu cầu chứng từ cho ${created} hồ sơ trong phiên.`
+                          : 'Các hồ sơ đã có yêu cầu chứng từ đang chờ xử lý trong phiên.',
                       )
                     }}
                   >

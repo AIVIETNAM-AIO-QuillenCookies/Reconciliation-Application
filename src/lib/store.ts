@@ -123,6 +123,28 @@ const emptyUploaded = (): Record<Source, boolean> => ({
   Dim: false,
 })
 
+function hasPendingEvidenceRequest(reviewCase: GLReviewCase): boolean {
+  if (reviewCase.status !== 'in_progress' || reviewCase.evidenceReviewed)
+    return false
+  const requested = reviewCase.history.findLastIndex(
+    (event) => event.action === 'evidence_requested',
+  )
+  if (requested < 0) return false
+  return !reviewCase.history.slice(requested + 1).some((event) => {
+    if (event.action !== 'updated') return true
+    try {
+      const after: Partial<GLCasePatch> = JSON.parse(event.detail).after ?? {}
+      return (
+        after.status === 'reviewed' ||
+        after.status === 'confirmed' ||
+        after.evidenceReviewed === true
+      )
+    } catch {
+      return true
+    }
+  })
+}
+
 /** The supplied Nexa Home exports cover FY2025; users can edit both dates. */
 export const DEFAULT_REPORTING_PERIOD: Readonly<ReconciliationPeriod> =
   Object.freeze({
@@ -501,26 +523,30 @@ export function createAppStore(
       if (!selected.size) throw new Error('Chọn yêu cầu cần bổ sung chứng từ.')
       if (state.status === 'running' || state.status === 'registering')
         throw new Error('Chờ phiên xử lý hoàn tất trước khi tạo công việc.')
-      publish({
-        reviewCases: state.reviewCases.map((c) =>
-          selected.has(c.id)
-            ? {
-                ...c,
-                status: 'in_progress',
-                nextStep: 'Yêu cầu bổ sung chứng từ gốc trong phiên đối soát.',
-                history: [
-                  ...c.history,
-                  {
-                    at: new Date().toISOString(),
-                    action: 'evidence_requested',
-                    detail:
-                      'Tạo công việc bổ sung chứng từ trong tab này; chưa gửi tin nhắn hoặc email.',
-                  },
-                ],
-              }
-            : c,
-        ),
+      let created = 0
+      const reviewCases = state.reviewCases.map((c): GLReviewCase => {
+        // Repeated clicks and retries reuse the pending work, including after
+        // unrelated notes or owner edits. A completed review can be reopened.
+        if (!selected.has(c.id) || hasPendingEvidenceRequest(c)) return c
+        created++
+        return {
+          ...c,
+          status: 'in_progress',
+          evidenceReviewed: false,
+          nextStep: 'Yêu cầu bổ sung chứng từ gốc trong phiên đối soát.',
+          history: [
+            ...c.history,
+            {
+              at: new Date().toISOString(),
+              action: 'evidence_requested',
+              detail:
+                'Tạo công việc bổ sung chứng từ trong tab này; chưa gửi tin nhắn hoặc email.',
+            },
+          ],
+        }
       })
+      if (created) publish({ reviewCases })
+      return created
     },
     previewGLCorrection(
       recordId: string,

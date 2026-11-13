@@ -5,7 +5,7 @@ Dashboard nằm tại mục **Tổng quan** trên sidebar. Bốn tab dùng chung
 ## Tài liệu thực tế có trong phiên
 
 - Đã đọc yêu cầu trong tệp văn bản đính kèm, mã nguồn, `Memory.md`, lớp tính toán và workbook `public/reference/excel-reference.xlsx`.
-- Không tìm thấy `Final.pbix`, ảnh web hoặc bốn ảnh Power BI trong attachments và cây thư mục `D:\edaAIVietNam\Module 1\Project`. Vì vậy chưa xác minh được layout gốc, quan hệ mô hình, tương tác visual, measure DAX hay ghi chú quốc gia trong PBIX. Không suy đoán công thức từ tên measure.
+- Không tìm thấy `Final.pbix`, ảnh web hoặc bốn ảnh Power BI trong attachments và cây thư mục dự án. Vì vậy chưa xác minh được layout gốc, quan hệ mô hình, tương tác visual, measure DAX hay ghi chú quốc gia trong PBIX. Không suy đoán công thức từ tên measure.
 - Các workbook được liệt kê trong `outputs/pos-source-audit/corpus-inventory.json` là tài liệu kiểm toán nguồn từ bước trước; dashboard không tự đọc các đường dẫn máy cá nhân đó và không coi chúng là dữ liệu đã nhập của phiên hiện tại.
 
 ## Quy ước tính và phạm vi

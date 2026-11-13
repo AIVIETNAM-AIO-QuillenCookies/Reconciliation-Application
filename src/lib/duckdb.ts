@@ -18,20 +18,47 @@ async function initialize(): Promise<duckdb.AsyncDuckDB> {
 
   // The single-threaded MVP/EH builds do not require COOP/COEP headers.
   const worker = new Worker(bundle.mainWorker)
+  // The library clears pending RPCs on a Worker error without rejecting them.
+  // Observe startup failures ourselves so a missing/invalid asset cannot leave
+  // the UI loading forever and the singleton can be retried.
+  let rejectWorkerFailure: (error: Error) => void = () => undefined
+  const workerFailure = new Promise<never>((_, reject) => {
+    rejectWorkerFailure = reject
+  })
+  const onWorkerError = (event: ErrorEvent) => {
+    rejectWorkerFailure(
+      new Error(event.message || 'Không thể tải Worker DuckDB. Hãy thử lại.'),
+    )
+  }
+  const onMessageError = () => {
+    rejectWorkerFailure(
+      new Error('Không thể đọc phản hồi từ Worker DuckDB. Hãy thử lại.'),
+    )
+  }
+  worker.addEventListener('error', onWorkerError)
+  worker.addEventListener('messageerror', onMessageError)
   const database = new duckdb.AsyncDuckDB(
     new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING),
     worker,
   )
 
   try {
-    await database.instantiate(bundle.mainModule, bundle.pthreadWorker)
-    await database.open({ path: ':memory:' })
+    await Promise.race([
+      (async () => {
+        await database.instantiate(bundle.mainModule, bundle.pthreadWorker)
+        await database.open({ path: ':memory:' })
+      })(),
+      workerFailure,
+    ])
     return database
   } catch (error) {
     // Failed initialization must not leak a worker or poison subsequent retries.
     await database.terminate().catch(() => undefined)
     worker.terminate()
     throw error
+  } finally {
+    worker.removeEventListener('error', onWorkerError)
+    worker.removeEventListener('messageerror', onMessageError)
   }
 }
 

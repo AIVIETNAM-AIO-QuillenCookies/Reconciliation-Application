@@ -12,6 +12,25 @@ dist
 dist-ssr
 *.local
 
+# Local configuration, credentials and deployment state
+.env
+.env.*
+!.env.example
+.vercel/
+.aws/
+.npm-cache/
+
+# Generated audits, browser QA and local input/output files
+outputs/
+.tmp-*/
+tmp/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+uploads/
+reports/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

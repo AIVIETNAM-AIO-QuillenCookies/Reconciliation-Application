@@ -482,6 +482,16 @@ test('accounting review interacts with shared cases, explicit correction preview
     )
     assert.equal(document.querySelector('.draft-indicator'), null)
     const requestedStep = store.getState().reviewCases[0].nextStep
+    const requestedHistory = store.getState().reviewCases[0].history
+    await click(button('Yêu cầu chứng từ'))
+    assert.strictEqual(
+      store.getState().reviewCases[0].history,
+      requestedHistory,
+    )
+    assert.match(
+      document.body.textContent,
+      /đã có yêu cầu chứng từ đang chờ xử lý/,
+    )
     await click(button('Lưu rà soát'))
     assert.equal(store.getState().reviewCases[0].status, 'in_progress')
     assert.equal(store.getState().reviewCases[0].nextStep, requestedStep)

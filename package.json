@@ -4,14 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:production": "node scripts/check-production.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
