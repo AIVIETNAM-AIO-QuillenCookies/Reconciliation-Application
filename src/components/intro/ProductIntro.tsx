@@ -15,7 +15,9 @@ import {
   MonitorPlay,
   Route,
   ShieldCheck,
+  Sparkles,
   UploadCloud,
+  UsersRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -117,7 +119,14 @@ export function ProductIntro(props: ProductIntroProps) {
           <DialogTitle>
             Giới thiệu Reconcile - Dự án Báo cáo đối soát doanh thu
           </DialogTitle>
-          <DialogDescription>Team eDA_Sale, We Analyze</DialogDescription>
+          <DialogDescription className="pi-team">
+            <span className="pi-team-badge">
+              <UsersRound size={13} aria-hidden="true" />
+              Team eDA_Sale
+            </span>
+            <span className="pi-team-sep" aria-hidden="true" />
+            <span className="pi-team-tagline">We Analyze</span>
+          </DialogDescription>
         </header>
         <IntroBody {...props} />
       </DialogContent>
@@ -447,10 +456,21 @@ function StartSection({
           <span className="pi-card-icon" aria-hidden="true">
             <LayoutDashboard size={19} />
           </span>
+          <span className="pi-start-badge">
+            <Sparkles size={12} aria-hidden="true" />
+            Khuyến nghị
+          </span>
           <strong>Xem dữ liệu mẫu trong ứng dụng</strong>
           <span>
             Mở workbook Nexa Home ở chế độ Tạm xem theo Excel, đúng như các màn
             hình vừa xem. Có thể quay lại Raw bất cứ lúc nào.
+          </span>
+          <span className="pi-start-hint">
+            Phù hợp nhất nếu bạn mới dùng lần đầu, chỉ cần một cú bấm.
+          </span>
+          <span className="pi-start-cta" aria-hidden="true">
+            Bắt đầu tại đây
+            <ArrowRight size={15} />
           </span>
         </button>
         <button

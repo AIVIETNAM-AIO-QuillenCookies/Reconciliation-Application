@@ -1,6 +1,7 @@
 import { VI } from './locale/vi.ts'
 import { METADATA_VI } from './locale/metadata-vi.ts'
 import { COMMON_VI } from './locale/common-vi.ts'
+import { isModuleLoadError, MODULE_LOAD_MESSAGE } from './module-load-error.ts'
 
 /** Presentation only: interpolation values (file/sheet/column names) are never translated. */
 export function vi(text: string): string {
@@ -59,6 +60,9 @@ export function isVietnameseMessage(message: string): boolean {
 export function explainError(message: string): string {
   const translated = viMessage(message)
   if (translated !== message || isVietnameseMessage(message)) return translated
+  // A missing app file is fixed by a reload, never by changing the user's data
+  // (its URL may contain “xlsx” or “duckdb”, which the rules below would blame).
+  if (isModuleLoadError(message)) return MODULE_LOAD_MESSAGE
   // POS diagnostics carry a specific reason code. Broad English word matches
   // must never turn an amount/FX/key failure into a date-only instruction.
   const posCode = /\[?(POS_[A-Z_]+)\]?/.exec(message)?.[1]

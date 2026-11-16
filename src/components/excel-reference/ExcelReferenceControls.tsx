@@ -20,7 +20,12 @@ import {
   allowReferenceSwitch,
 } from '@/lib/excel-reference-session'
 import { explainError } from '@/lib/i18n'
+import { isModuleLoadError } from '@/lib/module-load-error'
+import { ModuleLoadError } from '@/components/LocalizedError'
 import '@/excel-reference-controls.css'
+
+const REFERENCE_ALERT_CLASS =
+  'rounded-lg border border-destructive/30 bg-red-50 p-3 text-sm text-destructive'
 
 export function ExcelReferenceButton({
   compact = false,
@@ -210,14 +215,16 @@ export function ExcelReferenceDialog() {
               )
             })}
           </ol>
-          {reference.error && (
-            <p
-              role="alert"
-              className="rounded-lg border border-destructive/30 bg-red-50 p-3 text-sm text-destructive"
-            >
-              {reference.error}
-            </p>
-          )}
+          {reference.error &&
+            (isModuleLoadError(reference.error) ? (
+              <div role="alert" className={REFERENCE_ALERT_CLASS}>
+                <ModuleLoadError message={reference.error} />
+              </div>
+            ) : (
+              <p role="alert" className={REFERENCE_ALERT_CLASS}>
+                {reference.error}
+              </p>
+            ))}
           {workbook && (
             <section
               className="excel-reference-source-details"

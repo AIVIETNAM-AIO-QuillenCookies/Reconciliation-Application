@@ -9,6 +9,12 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ReloadPageButton } from '@/components/LocalizedError'
+import {
+  isModuleLoadError,
+  MODULE_LOAD_MESSAGE,
+  RELOAD_DATA_NOTE,
+} from '@/lib/module-load-error'
 import '@/interactive-guide.css'
 
 export interface GuideOverlayStep {
@@ -66,6 +72,8 @@ export function GuideOverlay(props: GuideOverlayProps) {
     onRestart,
     onExit,
   } = props
+  // Retrying cannot fetch a missing app file; the guide offers a reload first.
+  const moduleLoadFailure = !!error && isModuleLoadError(error)
   const [host, setHost] = useState<HTMLElement | null>(null)
   const panelRef = useRef<HTMLElement>(null)
   const busyRef = useRef(busy)
@@ -404,8 +412,13 @@ export function GuideOverlay(props: GuideOverlayProps) {
           {error && (
             <div className="guide-error" role="alert">
               <strong>Bước này chưa hoàn tất</strong>
-              <p>{error}</p>
+              <p>
+                {moduleLoadFailure
+                  ? `${MODULE_LOAD_MESSAGE} ${RELOAD_DATA_NOTE}`
+                  : error}
+              </p>
               <div>
+                {moduleLoadFailure && <ReloadPageButton variant="default" />}
                 <Button
                   variant="outline"
                   size="sm"

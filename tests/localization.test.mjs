@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict'
+import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   vi,
@@ -7,6 +7,10 @@ import {
   displayValue,
   explainError,
 } from '../src/lib/i18n.ts'
+import {
+  isModuleLoadError,
+  MODULE_LOAD_MESSAGE,
+} from '../src/lib/module-load-error.ts'
 import { displayNodeById, displayRuleById } from '../src/lib/localized-model.ts'
 import { modelNodes, methodologyRules } from '../src/lib/methodology.ts'
 
@@ -83,4 +87,27 @@ test('WEB and Flash composite validators do not accuse the reporting period', ()
     explainError('The period end must be on or after its start.'),
     /Ngày kết thúc.*sau ngày bắt đầu/,
   )
+})
+
+test('a failed app download asks for a reload instead of blaming the uploaded file', () => {
+  for (const message of [
+    // Chrome/Edge, Firefox and Safari word the same failure differently.
+    'Failed to fetch dynamically imported module: http://localhost:5173/node_modules/.vite/deps/xlsx.js?v=8c41938a',
+    'error loading dynamically imported module: https://example.test/assets/duckdb-B1x2.js',
+    'Importing a module script failed.',
+    'Unable to preload CSS for /assets/Dashboard-C3d4.css',
+  ]) {
+    assert.equal(isModuleLoadError(message), true, message)
+    assert.equal(explainError(message), MODULE_LOAD_MESSAGE, message)
+  }
+  assert.match(MODULE_LOAD_MESSAGE, /tải lại trang/)
+  assert.equal(
+    isModuleLoadError(
+      'Không đọc được workbook đi kèm. Hãy chọn file Excel tham chiếu.',
+    ),
+    false,
+  )
+  // Real file and engine failures keep their own explanations.
+  assert.match(explainError('Could not parse XLSX file'), /Không thể đọc tệp/)
+  assert.match(explainError('DuckDB worker failed to fetch WASM'), /Engine/)
 })

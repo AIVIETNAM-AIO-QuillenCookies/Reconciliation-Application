@@ -7,7 +7,11 @@ import { createServer } from 'vite'
 test('guide lazily loads the canonical 21-sheet source over dev HTTP under a non-root base URL', async () => {
   const server = await createServer({
     base: '/reconcile-check/',
+    // Like the other Vite-backed tests, keep a private dependency cache so a
+    // test run never rewrites node_modules/.vite/deps under a running dev server.
+    cacheDir: 'node_modules/.vite-tests/guide-assets',
     server: { host: '127.0.0.1', port: 0, open: false },
+    optimizeDeps: { noDiscovery: true },
   })
   const originalFetch = globalThis.fetch
   try {

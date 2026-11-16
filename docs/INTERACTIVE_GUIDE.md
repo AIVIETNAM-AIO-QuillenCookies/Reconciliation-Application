@@ -6,14 +6,14 @@ Từ 15/11/2026 không còn **trình diễn tự động**: hướng dẫn chỉ
 
 ## Màn hình giới thiệu
 
-`src/components/intro/ProductIntro.tsx` là hộp thoại lớn trên nền ứng dụng làm mờ, cùng kiểu với vùng **Phóng to** của dashboard (96vw × 92dvh), tiêu đề **Giới thiệu Reconcile - Dự án Báo cáo đối soát doanh thu**, dòng phụ **Team eDA_Sale, We Analyze**. Bên trái là danh sách 8 bước theo thứ tự của quy trình:
+`src/components/intro/ProductIntro.tsx` là hộp thoại lớn trên nền ứng dụng làm mờ, cùng kiểu với vùng **Phóng to** của dashboard (96vw × 92dvh), tiêu đề **Giới thiệu Reconcile - Dự án Báo cáo đối soát doanh thu**, dòng phụ là chip **Team eDA_Sale** kèm khẩu hiệu **We Analyze**. Bên trái là danh sách 8 bước theo thứ tự của quy trình:
 
 | Bước          | Nội dung                                                                                                                                                                                                                                                        |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. Giới thiệu | Bài toán Sales Flash ↔ Finance GL; chênh lệch −2.425.904,77 USD, ghi cả hai quy ước: −7,79% so với Flash (dashboard, workbook) và −8,45% so với GL (báo cáo).                                                                                                   |
 | 2. Quy trình  | Năm bước: nạp workbook → rà soát kế toán → nhật ký ngoại lệ → quy tắc ghi nhận → dashboard, kèm số liệu Nexa Home; mỗi bước mở màn hình tương ứng.                                                                                                              |
 | 3–7           | Ảnh chụp màn hình thật ở chế độ Excel tham chiếu, có chú thích đánh số: **Nạp workbook** (tiến trình nạp, bảng Xử lý dữ liệu), **Rà soát kế toán**, **Nhật ký ngoại lệ**, **Quy tắc ghi nhận** (tài liệu quy ước, thời điểm ghi nhận), **Dashboard** (4 trang). |
-| 8. Bắt đầu    | **Xem dữ liệu mẫu trong ứng dụng**, **Thực hành có hướng dẫn**, **Nhập dữ liệu của tôi**.                                                                                                                                                                       |
+| 8. Bắt đầu    | **Xem dữ liệu mẫu trong ứng dụng** (nhãn **Khuyến nghị**, nút **Bắt đầu tại đây**), **Thực hành có hướng dẫn**, **Nhập dữ liệu của tôi**.                                                                                                                       |
 
 Chuyển bước bằng danh sách bên trái, nút Trước/Tiếp hoặc phím ←/→; trang Giới thiệu không có nút trên đầu mà dùng nút **Xem quy trình**. Esc, nút đóng, **Bỏ qua giới thiệu** hoặc bất kỳ lựa chọn nào cũng đóng giới thiệu cho đến lần tải trang sau.
 

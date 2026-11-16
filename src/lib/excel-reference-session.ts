@@ -3,6 +3,7 @@ import {
   type ExcelReferenceWorkbook,
   type ReferenceParseOptions,
 } from './excel-reference.ts'
+import { downloadSample } from './sample-download.ts'
 import type {
   ReconciliationPeriod,
   ReconciliationResult,
@@ -117,15 +118,17 @@ export function createExcelReferenceController(
           const base =
             (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env
               ?.BASE_URL ?? '/'
-          const response = await fetch(
-            `${base}demo/Nexa_Home_Recon_Dataset_Final.xlsx`,
-            { signal: active.signal },
-          )
-          if (!response.ok)
-            throw new Error(
-              'Không đọc được workbook đi kèm. Hãy chọn file Excel tham chiếu.',
+          bytes = await downloadSample(async () => {
+            const response = await fetch(
+              `${base}demo/Nexa_Home_Recon_Dataset_Final.xlsx`,
+              { signal: active.signal },
             )
-          bytes = await response.arrayBuffer()
+            if (!response.ok)
+              throw new Error(
+                'Không đọc được workbook đi kèm. Hãy chọn file Excel tham chiếu.',
+              )
+            return response.arrayBuffer()
+          }, 'Kiểm tra mạng rồi bấm “Mở workbook đi kèm” để thử lại, hoặc “Chọn workbook” nếu bạn có sẵn file Excel tham chiếu.')
         }
         if (!current()) return
         const workbook = await parseExcelReference(

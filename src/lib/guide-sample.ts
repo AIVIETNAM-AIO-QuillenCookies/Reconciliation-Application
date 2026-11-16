@@ -4,6 +4,7 @@ import type { FilePreview, ColumnMapping } from './data-mapping.ts'
 import type { MasterConfiguration } from './master-data.ts'
 import type { QueuedFile, Source } from './uploads.ts'
 import { rememberWorkbook } from './workbook-cache.ts'
+import { downloadSample } from './sample-download.ts'
 
 export const GUIDE_SAMPLE_NAME = 'Nexa_Home_Recon_Dataset_Final.xlsx'
 export const GUIDE_SAMPLE_PATH = `demo/${GUIDE_SAMPLE_NAME}`
@@ -130,12 +131,14 @@ export async function loadGuideSample(
   const base =
     (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env
       ?.BASE_URL ?? '/'
-  const response = await fetch(`${base}${GUIDE_SAMPLE_PATH}`, { signal })
-  if (!response.ok)
-    throw new Error(
-      `Không tải được workbook mẫu (HTTP ${response.status}). Hãy thử lại.`,
-    )
-  const buffer = await response.arrayBuffer()
+  const buffer = await downloadSample(async () => {
+    const response = await fetch(`${base}${GUIDE_SAMPLE_PATH}`, { signal })
+    if (!response.ok)
+      throw new Error(
+        `Không tải được workbook mẫu (HTTP ${response.status}). Hãy thử lại.`,
+      )
+    return response.arrayBuffer()
+  }, 'Kiểm tra mạng rồi thử lại.')
   signal?.throwIfAborted()
   return inspectGuideSample(buffer, signal)
 }

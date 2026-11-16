@@ -9,6 +9,7 @@ import {
 } from '@duckdb/duckdb-wasm/blocking'
 import {
   inspectGuideSample,
+  loadGuideSample,
   GUIDE_COLUMNS,
   prepareGuideGL,
 } from '../src/lib/guide-sample.ts'
@@ -211,4 +212,34 @@ test('actual Raw engine validates selected sources and joins then stops at unsup
     /WEB_FX_NOT_SUPPORTED/,
   )
   assert.equal(snapshot.records.length, 6940)
+})
+
+test('the guided practice explains a sample download network failure in Vietnamese', async () => {
+  const savedFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async () => {
+      throw new TypeError('Failed to fetch')
+    }
+    await assert.rejects(loadGuideSample(), (error) => {
+      assert.equal(
+        error.message,
+        'Không tải được workbook mẫu, có thể do mất kết nối mạng hoặc máy chủ chưa phản hồi. Kiểm tra mạng rồi thử lại.',
+      )
+      assert.equal(error.cause.message, 'Failed to fetch')
+      return true
+    })
+    globalThis.fetch = async () => new Response('', { status: 503 })
+    await assert.rejects(loadGuideSample(), {
+      message: 'Không tải được workbook mẫu (HTTP 503). Hãy thử lại.',
+    })
+    // Leaving the guide aborts the download; that is not reported as offline.
+    const leaving = new AbortController()
+    leaving.abort()
+    globalThis.fetch = async (_url, { signal }) => signal.throwIfAborted()
+    await assert.rejects(loadGuideSample(leaving.signal), {
+      name: 'AbortError',
+    })
+  } finally {
+    globalThis.fetch = savedFetch
+  }
 })

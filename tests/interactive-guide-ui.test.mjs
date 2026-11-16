@@ -315,6 +315,23 @@ test('guide introduction, gated controls, modal targeting and isolated replay pr
     )
     await click('[data-tour="guide-controls"] [role="alert"] button')
     assert.equal(events.at(-1), 'retry')
+    // A missing app file (e.g. the sample's xlsx library) offers a reload first.
+    await render(
+      h(GuideOverlay, {
+        ...overlay,
+        error:
+          'Failed to fetch dynamically imported module: http://localhost/node_modules/.vite/deps/xlsx.js?v=0',
+      }),
+    )
+    const chunkAlert = modal.querySelector('[role="alert"]')
+    assert.match(chunkAlert.textContent, /Không tải được một phần của ứng dụng/)
+    assert.doesNotMatch(chunkAlert.textContent, /Failed to fetch/)
+    assert.deepEqual(
+      [...chunkAlert.querySelectorAll('button')].map((button) =>
+        button.textContent.trim(),
+      ),
+      ['Tải lại trang', 'Thử lại', 'Về cấu hình'],
+    )
     await act(async () => modal.remove())
     await settle()
     assert.ok(document.body.querySelector('[data-tour="guide-controls"]'))

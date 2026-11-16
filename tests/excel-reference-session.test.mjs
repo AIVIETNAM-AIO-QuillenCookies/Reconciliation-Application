@@ -356,3 +356,47 @@ test('default load fetches the bundled real workbook and remains independent of 
     store.dispose()
   }
 })
+
+test('a network failure while downloading the bundled workbook explains itself in Vietnamese', async () => {
+  const store = createAppStore()
+  const savedFetch = globalThis.fetch
+  const offline =
+    'Không tải được workbook mẫu, có thể do mất kết nối mạng hoặc máy chủ chưa phản hồi. Kiểm tra mạng rồi bấm “Mở workbook đi kèm” để thử lại, hoặc “Chọn workbook” nếu bạn có sẵn file Excel tham chiếu.'
+  try {
+    // Chrome/Edge, Firefox and Safari word the same rejected request differently.
+    for (const wording of [
+      'Failed to fetch',
+      'NetworkError when attempting to fetch resource.',
+      'Load failed',
+    ]) {
+      globalThis.fetch = async () => {
+        throw new TypeError(wording)
+      }
+      await store.actions.loadExcelReference()
+      const reference = store.getState().excelReference
+      assert.equal(reference.status, 'error')
+      assert.equal(reference.enabled, false)
+      assert.equal(reference.error, offline)
+    }
+    // A connection that drops during the body read is the same failure.
+    globalThis.fetch = async () => ({
+      ok: true,
+      arrayBuffer: async () => {
+        throw new TypeError('network error')
+      },
+    })
+    await store.actions.loadExcelReference()
+    assert.equal(store.getState().excelReference.error, offline)
+    // HTTP failures keep their own message.
+    globalThis.fetch = async () => new Response('', { status: 404 })
+    await store.actions.loadExcelReference()
+    assert.equal(
+      store.getState().excelReference.error,
+      'Không đọc được workbook đi kèm. Hãy chọn file Excel tham chiếu.',
+    )
+    assert.equal(selectActiveResult(store.getState()).source, 'raw')
+  } finally {
+    globalThis.fetch = savedFetch
+    store.dispose()
+  }
+})
