@@ -1,12 +1,12 @@
 # Reconciliation Auto-Pilot — AI Context Restorer
 
-Architecture and implementation snapshot: **2026-11-12**. This README is a project handoff that can be pasted into a new AI conversation. It describes the existing application, accepted accounting rules, completed work, and next development direction. Source files and executable tests are the final authority when this snapshot becomes outdated.
+Architecture and implementation reviewed: **2026-11-13**, against commit `ed969a42233dfe191e6aac054a156c73ce8e55fc` (package version `0.1.0`). This architecture document is a project handoff. Source files and executable tests remain the implementation evidence. The Vietnamese [research application map](docs/RESEARCH_APPLICATION_MAP.md) records the research sources, implementation status, verification limits and gaps.
 
 ## 1. Project overview and completion status
 
 Reconciliation Auto-Pilot is a browser-only finance workspace that explains the difference between operational sales and financial ledger revenue. Users import POS, WEB, Finance GL, Sales Flash, and optional Master/Dim files, map their columns, and run a traceable reconciliation. Results appear in a revenue waterfall, daily store comparisons, and a searchable Exception Log.
 
-**Phases 1–4 are completed:** application scaffolding and ingestion, DuckDB reconciliation, Dashboard/Exception Log, and shared state with coordinated processing. The subsequent mapping and onboarding refinements are also implemented:
+The source contains application scaffolding and ingestion, DuckDB reconciliation, Dashboard/Exception Log, and shared state with coordinated processing. Earlier handoffs called these “Phases 1–4”; that label is not acceptance of every research recommendation or an end-to-end run on the full external dataset. The subsequent mapping and onboarding refinements are also implemented:
 
 - Phase 1.5: per-file mapping, smart suggestions, and spreadsheet previews.
 - Phase 1.6: five-step onboarding modal connected to real processing.
@@ -14,7 +14,7 @@ Reconciliation Auto-Pilot is a browser-only finance workspace that explains the 
 - Phase 1.9: dynamic header-row selection for metadata-heavy files.
 - Phase 1.10: one stable header selector per file and correct rapid +/- updates.
 
-The project is already scaffolded and functional. There is no backend upload service, account system, or durable financial-data storage. Files, mappings, and results live in this browser tab and are lost on refresh. Production screens use uploaded data; synthetic fixtures belong to tests.
+The project is already scaffolded. There is no backend upload service, account system, or durable financial-data storage. Files, mappings, and results live in this browser tab and are lost on refresh. Raw screens use uploaded data; synthetic fixtures belong to tests. A separate, explicitly selected Excel reference mode reads precomputed results from the bundled workbook or a structurally compatible selection. Rendering that mode is not proof of Raw processing success; see [EXCEL_REFERENCE_PREVIEW.md](EXCEL_REFERENCE_PREVIEW.md).
 
 The interface has a shared finance design system: a forest-green sidebar, compact reporting controls, exact-cent KPIs, a focused bridge, daily comparisons and an exception preview. Data sources is now a five-source management page rather than an automatic modal entry. Each source opens its own step in the shared wizard. Desktop import uses a 208px source rail with a separately scrolling body and a stable footer; mobile uses compact source navigation. Visiting a source directly never waives completion validation. Source badges distinguish pending previews from actively reading the current wizard source. No demo data or accounting SQL was added for this visual refresh.
 
@@ -34,7 +34,7 @@ The import wizard uses one viewport-sized shell for empty, reading, mapping, war
 | React Router             | Hash-based routes suitable for static hosting                              |
 | Node test runner + jsdom | Logic, real DuckDB integration, and React DOM regression tests             |
 
-Use Node.js **22.12+**; Node 24 LTS is recommended. Dependencies and versions are recorded in `package.json` and `package-lock.json`; do not recreate the scaffold or replace the lockfile casually. SheetJS is installed from its vendor-distributed 0.20.3 tarball. jsdom is a development dependency pinned for compatibility with the supported Node baseline.
+Use Node.js **24.x**, as required by `package.json`, `.nvmrc` and the CI workflow. Dependencies and versions are recorded in `package.json` and `package-lock.json`; do not recreate the scaffold or replace the lockfile casually. SheetJS is installed from its vendor-distributed 0.20.3 tarball. jsdom is a development dependency pinned in the lockfile.
 
 ```bash
 npm ci
@@ -83,75 +83,118 @@ Routes:
 | `#/processing`        | Retained same-run table previews and processing inspector      |
 | `#/accounting-review` | Interactive GL review, evidence, correction previews and audit |
 | `#/settings`          | Engine status and clearing the current selection               |
+| `#/methodology`       | Read-only rules, sources/joins and retained same-run evidence  |
 
 Interactive GL accounting review is implemented. Unallocated journals remain in company GL; blocking financial-data errors retain source diagnostics. Review decisions and exception controls share browser-session state, and financial corrections use reasoned overlays with previews, recomputation and undo. See [GL_ACCOUNTING_REVIEW.md](GL_ACCOUNTING_REVIEW.md) for the diagnosis, data contracts and validation scope.
 
 ## 4. Source tree and ownership
 
+Tree refreshed on **2026-11-15** against the working tree, after the behavior-preserving structural refactor recorded in [docs/REFACTORING_REPORT.md](docs/REFACTORING_REPORT.md). Every directory is listed; files grouped on one line are small, single-purpose modules named after their responsibility.
+
 ```text
 src/
-├── App.tsx                         # Providers and hash routes
-├── main.tsx                        # React entry point
-├── index.css                       # Tailwind v4 and application theme
-├── assets/                         # Static assets; no production data fixtures
+├── App.tsx                          # Providers (DuckDB → store → guide workspace) and hash routes
+├── main.tsx                         # React entry point; loads index.css
+├── index.css                        # Tailwind v4 and application theme
+├── *.css                            # Feature stylesheets, imported by the modules that use them
+├── assets/                          # Static assets; no production data fixtures
 ├── components/
-│   ├── AppStoreProvider.tsx         # Store-to-DuckDB processing connection
-│   ├── CompatibilityNotice.tsx      # Accounting notes / explicit legacy notices
-│   ├── SourceIcon.tsx               # Source labels, icons, and colors
+│   ├── AppStoreProvider.tsx          # Store-to-DuckDB processing connection
+│   ├── PageInformation.tsx           # Page information panel and InformationNote
+│   ├── ReconciliationRunStatus.tsx   # Run / GL status banner and recovery actions
+│   ├── CompatibilityNotice.tsx       # Accounting notes / explicit legacy notices
+│   ├── LocalizedError.tsx, SourceIcon.tsx, ExpandBackdrop.tsx
 │   ├── layout/
-│   │   └── AppLayout.tsx            # Sidebar, shell, and shared wizard instance
+│   │   └── AppLayout.tsx             # Sidebar, shell, shared wizard, Excel banner, unload guard
 │   ├── ingestion/
-│   │   ├── OnboardingWizard.tsx     # Five-step modal and upload orchestration
-│   │   ├── DataMappingView.tsx      # One-file mapping editor and preview
-│   │   └── HeaderRowSelector.tsx    # Single header-row input and +/- controls
+│   │   ├── OnboardingWizard.tsx      # Five-step modal and upload orchestration
+│   │   ├── DataMappingView.tsx       # One-file mapping editor and preview
+│   │   ├── HeaderRowSelector.tsx     # Single header-row input and +/- controls
+│   │   ├── MasterDataConfigurator.tsx # Master/Dim roles, fields and joins (exports SearchSelect)
+│   │   └── MasterFlowSummary.tsx     # Confirmed Master configuration summary
+│   ├── processing/                   # ProcessingDialog, ProgressView, PosDiagnosticsView
 │   ├── dashboard/
-│   │   ├── WaterfallChart.tsx       # Recharts waterfall with exact-cent inputs
-│   │   ├── SourceSchema.tsx         # Human-readable schema and accounting help
-│   │   ├── ExceptionLog.tsx         # Reusable exception table
-│   │   └── exceptions/
-│   │       ├── ExceptionBadge.tsx
-│   │       └── ExceptionActions.tsx
-│   └── ui/                         # Local shadcn/ui components
-│       └── button, input, dialog, select, table, card, badge,
-│           dropdown-menu, sheet, tabs, separator, skeleton
+│   │   ├── DashboardSuite.tsx        # Dashboard page: four tabs, filters, inspector sheet
+│   │   ├── DashboardPanels.tsx       # Overview matrix and data-source chip
+│   │   ├── DashboardCharts.tsx       # Waterfall, trend, variance and ranking charts
+│   │   ├── DashboardPrimitives.tsx   # Overview KPI, empty state and DataTable
+│   │   ├── DashboardWidgets.tsx      # Widget frame and the shared expand dialog
+│   │   ├── DetailQualityTabs.tsx     # "Đối soát chi tiết" and "Hoàn trả & chất lượng" tabs
+│   │   ├── DetailPrimitives.tsx      # Metric, paged table and trend chart used by those tabs
+│   │   ├── detail-format.ts          # Number/date formatting for those tabs
+│   │   ├── ExceptionLog.tsx          # Reusable exception table
+│   │   ├── exceptions/               # ExceptionBadge, ExceptionActions
+│   │   └── SourceSchema.tsx, WaterfallChart.tsx # Not imported anywhere (cleanup candidates)
+│   ├── accounting-review/            # GL review panels rendered by pages/AccountingReview.tsx
+│   │   ├── GLDiagnosticsView.tsx     # Also used by processing views (via the page re-export)
+│   │   ├── AccountingExceptionCases.tsx # Also used by the Exception Log (via the page re-export)
+│   │   ├── RecordInspector.tsx       # Journal inspector: overview, evidence, correction, history
+│   │   ├── CaseInspector.tsx, CorrectionForm.tsx, TransformationHistory.tsx
+│   │   └── review-format.ts          # Classification/status labels, money and channel display
+│   ├── excel-reference/
+│   │   ├── ReferenceViews.tsx        # Public entry: re-exports the views, loads reference-views.css
+│   │   ├── ReferencePrimitives.tsx   # View props, headings, period control, SourceTable, checks
+│   │   ├── ReferenceExceptions.tsx, ReferenceTables.tsx, ReferenceMethodology.tsx,
+│   │   │   ReferenceAccountingSummary.tsx
+│   │   ├── ReferenceDashboard.tsx    # Legacy view, not rendered (cleanup candidate)
+│   │   ├── reference-format.ts       # Plain-text formatting shared by the views
+│   │   └── ExcelReferenceControls.tsx # Toggle, banner and loading dialog
+│   ├── methodology/                  # Rules & Data Model: toolbar, canvas, rules, inspector,
+│   │                                 # evidence, sources/joins, record proof, print document
+│   ├── conventions/                  # Recording-conventions document, block editors,
+│   │                                 # live appendix and revision dialogs
+│   ├── guide/                        # Interactive guide provider, overlay, welcome/summary
+│   │                                 # and the isolated sample workspace
+│   └── ui/                           # Local shadcn/ui components (separator.tsx is not imported)
 ├── hooks/
-│   └── useDuckDB.tsx                # Shared database Context and readiness
-├── pages/
-│   ├── Dashboard.tsx
-│   ├── DataIngestion.tsx
-│   ├── DataMapping.tsx              # Legacy route redirect
-│   ├── ExceptionLog.tsx
-│   └── Settings.tsx
+│   ├── useDuckDB.tsx                 # Shared database Context and readiness
+│   ├── useExpandedView.ts            # Floating "Phóng to" view behavior
+│   └── useConventionUnloadGuard.ts   # Warn before losing unsaved/unexported conventions
+├── pages/                            # Route components. DataMapping.tsx is a legacy redirect;
+│                                     # AccountingReview.tsx re-exports two review panels
 ├── lib/
-│   ├── store.ts                    # State, actions, confirmation, stale-run guards
-│   ├── uploads.ts                  # Sources, queued files, limits, validation
-│   ├── onboarding.ts               # Step definitions and readiness rules
-│   ├── source-status.ts            # Shared preview/mapping status for cards and navigation
-│   ├── data-mapping.ts             # Mapping schema, aliases, validation, snapshots
-│   ├── header-row.ts               # Scalar updates, bounds, recoverable error type
-│   ├── mapping-preview.ts          # Bounded SheetJS preview parsing
-│   ├── read-mapping-preview.ts     # Preview worker client and cancellation
-│   ├── spreadsheet-range.ts        # Selected rows and metadata-only columns
-│   ├── spreadsheet.ts              # Full CSV/XLSX conversion for ingestion
-│   ├── spreadsheet-types.ts        # Spreadsheet worker messages
-│   ├── decode-spreadsheet.ts       # Full-file worker client
-│   ├── duckdb.ts                   # One database instance and bundled WASM assets
-│   ├── ReconciliationEngine.ts     # Registration, projections, SQL, results, cleanup
-│   ├── reconciliation-accounting.ts # Production accounting and dimension lookups
-│   ├── reconciliation-sql.ts       # Normalized views, daily comparison, bridge SQL
-│   ├── reconciliation-schema.ts    # Schema help and legacy strict-mode columns
-│   ├── reconciliation-types.ts     # Result types and waterfall transformation
+│   ├── store.ts                      # State, actions, confirmation, stale-run guards
+│   ├── uploads.ts, onboarding.ts, source-status.ts
+│   ├── data-mapping.ts, header-row.ts, mapping-preview.ts, read-mapping-preview.ts
+│   ├── spreadsheet.ts, spreadsheet-range.ts, spreadsheet-types.ts, spreadsheet-values.ts,
+│   │   decode-spreadsheet.ts, source-coordinates.ts, workbook-cache.ts
+│   ├── master-data.ts, master-joins.ts # Master/Dim configuration and typed LEFT JOIN SQL
+│   ├── duckdb.ts                     # One database instance and bundled WASM assets
+│   ├── ReconciliationEngine.ts       # Registration, projections, SQL, results, cleanup
+│   ├── sql-quoting.ts                # The single SQL identifier/literal quoting implementation
+│   ├── reconciliation-accounting.ts  # Production accounting projections and lookups
+│   ├── pos-pipeline-sql.ts, pos-diagnostics.ts, gl-pipeline.ts
+│   ├── reconciliation-sql.ts         # Normalized views, daily comparison, bridge SQL
+│   ├── reconciliation-schema.ts, reconciliation-types.ts
 │   ├── reconciliation-compatibility.ts # Explicit legacy adapter; not production
-│   ├── exceptions.ts               # Exception types, filtering, drafts, CSV content
-│   ├── exception-download.ts       # Browser-local CSV downloads
-│   ├── format-money.ts             # Exact-cent currency formatting
-│   └── utils.ts                    # Shared class-name utilities
+│   ├── reconciliation-evidence.ts, validation-failure.ts, run-failure.ts
+│   ├── processing-progress.ts, processing-workspace.ts
+│   ├── gl-review.ts, accounting-review.ts, review-layout.ts
+│   ├── exceptions.ts, exception-download.ts, format-money.ts
+│   ├── dashboard-model.ts            # Dashboard snapshot, model and thresholds
+│   ├── dashboard-summary.ts          # Overview grouping of bridge rows (display only)
+│   ├── dashboard-format.ts           # Dashboard money/percent/month/compact formatting
+│   ├── excel-reference.ts, excel-reference-session.ts, excel-dashboard.ts
+│   ├── methodology.ts, model-workspace.ts, localized-model.ts
+│   ├── convention-document.ts, convention-download.ts
+│   ├── interactive-guide.ts, guide-dom.ts, guide-master-actions.ts,
+│   │   guide-sample.ts, guide-reference.ts
+│   ├── i18n.ts, locale/              # Vietnamese presentation dictionaries
+│   └── utils.ts                      # Shared class-name utilities
 └── workers/
-    ├── mapping-preview.worker.ts   # Bounded previews; recoverable header errors
-    └── spreadsheet.worker.ts       # Full workbook decompression and conversion
+    ├── mapping-preview.worker.ts     # Bounded previews; recoverable header errors
+    └── spreadsheet.worker.ts         # Full workbook decompression and conversion
 ```
 
-Root configuration includes `vite.config.ts`, TypeScript configs, `components.json`, `package.json`, and the lockfile. `tests/` contains mapping, onboarding, header-row, DOM, store, exception, and real DuckDB integration tests. `tests/fixtures/` contains synthetic test inputs, not runtime demo data.
+Root configuration includes `vite.config.ts`, TypeScript configs, `components.json`, `package.json`, and the lockfile. `tests/` contains mapping, onboarding, header-row, DOM, store, exception, and real DuckDB integration tests. `tests/fixtures/` contains synthetic test inputs, not runtime demo data. `scripts/` holds the production HTTP check and the POS source audit script.
+
+### Module conventions
+
+- **Layering.** Pages compose components; components use hooks and `lib/`; `lib/` never imports components (only `store.ts` uses React, for its Context). Non-component helpers and label maps live in `.ts` files beside their components, so `react/only-export-components` stays satisfied.
+- **Import style.** `src/lib` uses relative imports with explicit `.ts` extensions and `import type` for types, because lib tests load these files directly with Node's `--experimental-strip-types`. Components and pages use the `@/` alias; UI tests load them through a Vite server.
+- **Stylesheet order.** Each stylesheet is imported by the module that uses it, and the single production CSS bundle follows module evaluation order. Changing which module first imports a stylesheet-bearing module reorders that bundle. For that reason `components/processing/ProgressView.tsx`, `pages/DataProcessing.tsx` and `pages/ExceptionLog.tsx` still import the two GL review panels through `@/pages/AccountingReview`. After moving imports, rebuild and confirm `dist/assets/index-*.css` is unchanged.
+- **SQL text.** Quote identifiers and literals only through `lib/sql-quoting.ts`. Never interpolate uploaded column, sheet, file or value text without it.
+- **Compatibility entry points.** `pages/AccountingReview.tsx` and `components/excel-reference/ReferenceViews.tsx` keep their original exports as re-exports of the split modules; existing imports and tests use them.
 
 ## 5. Onboarding, mappings, and header-row behavior
 
@@ -194,7 +237,7 @@ interface ConfirmedFileMapping {
 }
 ```
 
-`MappingFieldId` includes `transaction_id`, `date`, `gross_amount`, `discount`, `net_amount`, `store_key`, `line_no`, `order_status`, `journal_type`, `posting_date`, `delivery_date`, `return_date`, and `exported_at`. `mappingDrafts` is keyed by file ID and stores its preview, current column choices, optional dimension previews, and any typed parsing error. Two files for one source can have different headers and mappings.
+`MappingFieldId` includes `transaction_id`, `date`, `gross_amount`, `discount`, `net_amount`, `store_key`, `line_no`, `order_status`, `journal_type`, `posting_date`, `delivery_date`, `return_date`, `exported_at`, and `currency`. `mappingDrafts` is keyed by file ID and stores its preview, current column choices, optional dimension previews, and any typed parsing error. Two files for one source can have different headers and mappings.
 
 Confirmed selections override automatic/native header discovery. Clearing an optional selection means it is deliberately unmapped; the processor must not rediscover a familiar column and silently use it.
 
@@ -206,11 +249,11 @@ The mapping schema lives in `data-mapping.ts`; production SQL projections live i
 | ------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | POS    | Transaction ID, Date, Gross Amount, Discount, Store ID, Line Number    | Net Amount, Posting Date, Exported At                |
 | WEB    | Transaction ID, Date, Gross Amount, Discount, Order Status             | Net Amount, Store ID, Delivery Date, Return Date     |
-| GL     | Transaction ID, Date, signed Net Amount, Store ID, Journal Type        | None of these required fields can be omitted         |
+| GL     | Transaction ID, Date, signed Net Amount, Journal Type                  | Store ID, Currency                                   |
 | Flash  | Date, Gross Amount / monthly revenue                                   | No transaction ID required                           |
 | Dim    | Explicit role, sheet, field and relationship mappings; full validation | Optional until uploaded; enabled roles must be valid |
 
-Optional WEB date mappings remain conditionally required by the actual order rows. Preview readiness is not full accounting validation.
+Currency is an optional mapping on all four sources, but becomes necessary when deriving POS USD from local amounts. Optional WEB date mappings remain conditionally required by the actual order rows. GL Store ID can remain unmapped for explicitly unallocated journals, subject to GL allocation validation. Preview readiness is not full accounting validation.
 
 The wizard requires gross and discount mappings. The programmatic accounting adapter also retains documented alternatives, such as supplied-net-only inputs and an absent USD discount column meaning no discount, with a mapping note. These existing alternatives are not permission to add arbitrary zero-value fallbacks.
 
@@ -255,7 +298,7 @@ This decision is made from mapping configuration before generating SQL, not by f
 
 - Fields: `journal_id`, `posting_date`, `store_key` / mapped alias, `journal_type`, and signed **`amount_usd`**.
 - Mapping label Net Amount is required for GL; gross-minus-discount cannot reconstruct a ledger amount.
-- Normalize the accounting sign exactly once: **`revenue_usd = -amount_usd`**.
+- Normalize ledger-basis amounts exactly once: **`revenue_usd = -amount_usd`**. If the selected field already represents revenue, `glAmountBasis: 'revenue'` preserves its sign through the normalization contract; see `effectiveGLAmountBasis` and `accountingProjection`.
 - Journal IDs must be unique across selected GL files.
 - Aggregate revenue by **`store_key × posting_date`** before comparing it with source revenue.
 - Upload revenue journals only. All included journal types affect the finance total; a MANUAL label alone does not determine a bridge adjustment.
@@ -362,7 +405,7 @@ Important invariants:
 - Compare only after aggregating both sides to **store_key × posting_date**. Do not join individual receipts/orders to GL journals.
 - A nonzero expected group with no GL journals is missing GL. Its bridge adjustment is **0 − expected revenue**; a missing refund day therefore produces a positive adjustment.
 - A present GL group with the wrong amount, including a zero-valued journal, is a variance rather than a missing group. Extra GL days, manual adjustments, FX basis effects, and coverage gaps remain explainable residuals, not invented rounding/data errors.
-- Daily SQL variance is **GL − expected source**. Exception deltas are **source − GL**. Dashboard headline variance is **Flash − GL**. Preserve these distinct conventions.
+- Daily SQL variance is **GL − expected source**. Raw Exception Log deltas are **source − GL**. The current shared Dashboard headline is **GL − Flash**; the Excel adapter's `varianceUSD` retains **Flash − Finance**. Preserve these distinct conventions and label their context.
 - USD uses `DECIMAL(18,2)`. Results are converted through decimal strings to safe integer cents. `result.cents` is authoritative; floating-point USD values are presentation conveniences. Reject unsafe totals.
 - Accepted dates include ISO, US-first slash dates then day-first slash dates, timestamps, and supported calendar keys. Prefer ISO to avoid ambiguity.
 - Never fabricate financial amounts, transaction IDs, reporting dates, stores, or target totals. Full row validation remains enabled in production accounting mode.
@@ -403,9 +446,17 @@ Email actions create encoded `mailto:` drafts for user review; they do not send 
 
 ### Rules & Data Model workspace
 
-This page is read-only. Its components and view models consume existing methodology metadata and successful-run evidence; they do not modify mapping, rules, relationships, SQL, or accounting state.
+This page is read-only for processing. Its components and view models consume existing methodology metadata and successful-run evidence; they do not modify mapping, rules, relationships, SQL, or accounting state.
 
-- `WorkspaceToolbar` owns the compact heading and Pipeline / Sources & joins / Unified transactions / Rules navigation. `SourcesAndJoins` shows current files, selected header rows, required/optional mappings, supported grains and source roles. Its `ReferenceSummary` expands the actual confirmed Master configuration within the scrolling source panel.
+**Recording-conventions document.** Both result sources open on a typeset document (`src/components/conventions/`): Excel reference replaces the former definition list; Raw adds a first, default **Tài liệu quy ước** tab. The original text lives in `ORIGINAL_CONVENTION_DOCUMENT` (`src/lib/convention-document.ts`), transcribed from the report's sections IV, V and IX: scope, grain/keys, joins, recognition dates, revenue sign, net value, FX, the Table 19 thresholds and the Table 20 bridge order. Section 6 is live (workbook sheets, bridge amounts and arithmetic checks for the selected Excel period, or the Raw run status and bucket mapping); section 7 is the revision history.
+
+- Read/Edit mode. Paragraphs, callouts, formulas, lists, table cells/rows, threshold values and bridge texts are edited inline; sections, block IDs, table columns, live content and the fixed Excel/Raw bridge mappings are not. Custom paragraphs may be added. Saving requires a change note, bumps the minor version (1.0 → 1.1) and appends a revision.
+- Session only, like every other input: state (`conventions` in the store: document, draft, exported version) is never persisted. JSON export/import (`reconcile.convention-document`, schema 1, validated by `parseConventionDocument`) carries a version across sessions. While a draft is unsaved or a saved session version is not exported, the page shows a banner and `useConventionUnloadGuard` (mounted in `AppLayout`) asks before reload/close on any page. Reset restores the bundled original.
+- The document never drives calculations. The “Ứng dụng đang dùng” column reads exported engine constants (`STORE_MONTH_THRESHOLD_CENTS`, `STORE_MONTH_THRESHOLD_PERCENT`, `DEFAULT_EXCEPTION_THRESHOLD_CENTS`, `REFERENCE_TOLERANCE_USD`) and labels each convention Khớp / Chặt hơn / Khác một phần / Khác / Chưa áp dụng. Known differences stay visible: Exception Log has no 1% condition, the Excel adapter uses 0.01 USD against the report's 1 USD, and Raw has no rounding/FX/shipping buckets.
+- Print / Save PDF on the document tab prints only the A4 document (`convention-document.css`); other Raw tabs still print `.mw-print-document`.
+- **Phóng to** (`useExpandedView` + `ExpandBackdrop`, `src/expanded-view.css`) lifts the view to a 96vw × 94dvh floating panel over a dimmed, blurred page (full viewport on mobile). Raw expands the whole workspace from the run-context row, so every tab and the inspector stay usable; while expanded the run-context row is hidden, the title and tabs share the top row and an X button closes; Excel expands the document from its toolbar. Escape (unless a dialog is open), the backdrop or **Thu nhỏ** closes it; app navigation is inert meanwhile and focus returns to the toggle. It is mutually exclusive with Presentation mode.
+
+- `WorkspaceToolbar` owns the compact heading and Document / Pipeline / Sources & joins / Unified transactions / Rules navigation. `SourcesAndJoins` shows current files, selected header rows, required/optional mappings, supported grains and source roles. Its `ReferenceSummary` expands the actual confirmed Master configuration within the scrolling source panel.
 - `PipelineCanvas`, `PipelineNode`, and `PipelineEdge` render stable metadata IDs. Primary flow, all connections, and reference lookup views make graph density explicit. Connectors route orthogonally around nodes. Drag or scroll to pan; Ctrl + scroll or +/- to zoom; F fits the view; 0 resets. Arrow keys pan a focused canvas. Source and stage controls focus the view. Narrow screens use a grouped overview.
 - `RuleBrowser` searches names, conditions, behavior, inputs, and technical expressions. Source/category filters and counts come from metadata. `SelectionInspector` presents structured node, connection, rule, table, or record details, with links between rules and related nodes. Expressions can be copied but never executed or edited here.
 - `EvidenceTable` keeps the existing retained-row scope, filtering semantics and source-record ordinals. Applied statuses come from actual run evidence. With no successful run, the page shows definitions and an empty evidence state without fabricating records or validation results.
@@ -430,9 +481,9 @@ The Vietnamese progress UI separates **configuration validation** from **account
 
 ## 12. Verification, deployment, and limits
 
-Current automated baseline: **170 passing tests**, successful production build, and passing formatting checks. Lint succeeds with seven existing warnings; Vite reports the existing large-bundle warning.
+Verification repeated on **2026-11-13** for this documentation review: `npm.cmd test` passed **227/227** tests (0 failed/skipped), and `npm.cmd run typecheck` passed on Node 24.13.1/npm 11.8.0. No application, UI or accounting rules were changed. Build, lint and HTTP-preview results from the earlier release exercise are historical records in [RELEASE_CHECK.md](RELEASE_CHECK.md), not checks rerun by this review. Browser layout, native interactions, full external Raw inputs and actual deployment remain unverified here.
 
-The [POS pipeline audit](POS_PIPELINE_AUDIT.md) records the repair, actual full-table diagnostics and source workbook lineage. Read-only inspection of sibling project workbooks reproduced the reported 10,058 invalid rows from 17,124 real POS records: non-USD local net was valid but the old projection produced null USD. The repaired SQL identified 17,112 keepers and 12 discarded exports. Final actual USD/Fact remains blocked until the confirmed Master references/configuration are supplied; the audit does not manufacture FX from GL journal attributes.
+The [POS pipeline audit](POS_PIPELINE_AUDIT.md) separates current code from historical full-table diagnostics and source workbook lineage. Its 10,058 invalid rows / 17,124 input rows / 17,112 keepers / 12 discarded exports describe an earlier external-workbook audit, not a run repeated here. The full external Raw dataset and confirmed Master configuration are unavailable for this review. Current fixture tests do exercise the USD/fact path with configured FX; there is no blanket code-level block preventing all Raw runs. The engine does not manufacture FX from GL journal attributes.
 
 | Test file                        | Coverage                                                                                                                                                                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -483,12 +534,12 @@ The next major product direction is a **Rules Engine** that lets users configure
 
 This is planned, not implemented. Existing optional-net derivation is a fixed accounting rule, not a general formula editor. A future implementation should use typed, validated expressions compiled to quoted SQL, preserve DECIMAL arithmetic and supplied-net precedence, and record the rule version used by a run. Extend the shared mapping/store/engine contracts together and retain the regression suite. Do not use arbitrary JavaScript `eval` or silently weaken existing accounting validation.
 
-Potential later work includes persisted mapping/rule profiles, independent header-row selection per dimension worksheet, and reviewed ERP integrations. None should be assumed to exist today.
+Potential later work recorded in the handoff includes persisted mapping/rule profiles and reviewed ERP integrations; neither exists today. Independent header-row selection per dimension worksheet is already implemented in `setMasterSheetHeader` and `MasterDataConfigurator`, so it is not pending roadmap work. These directions are repository roadmap notes, not evidence of approved owners, deadlines or work currently in progress. Additional gaps proposed by the documentation reviewer are kept separately in the [research application map](docs/RESEARCH_APPLICATION_MAP.md).
 
 ## 14. Note to AI Assistant — restore this context before editing
 
-1. **Assume this project is fully scaffolded and Phases 1–4 are completed.** Inspect the existing files before proposing changes. Do not regenerate the app, replace the stack, add a second database, or load demo data into production views.
-2. Use this README as context and the current source/tests as implementation evidence. Follow the user's new requirements when they intentionally change an earlier decision; update documentation and tests accordingly.
+1. **Assume this project is already scaffolded; verify the scope of each feature from code.** Do not regenerate the app, replace the stack, add a second database, or mix reference Excel results into a Raw run.
+2. Use this architecture document and the research application map as context, and current source/tests as implementation evidence. Follow the user's new requirements when they intentionally change an earlier decision; update documentation and tests accordingly.
 3. Preserve the pipeline: one shared wizard → per-file header/mapping confirmation → accounting SQL on the shared DuckDB instance → atomic store results → Dashboard and Exception Log.
 4. Preserve dynamic header selection. The reference Flash profile uses Row 5 to skip four metadata rows; other files may use Row 1 or another selected row. Apply the same selection to preview and ingestion. Keep one scalar selector and distinct sibling React keys.
 5. POS/WEB Net Amount is optional. A mapped net is authoritative, including zero; an unmapped net derives gross minus discount. Invalid mapped cells fail. GL signed amount remains required, with one sign reversal.
@@ -497,3 +548,4 @@ Potential later work includes persisted mapping/rule profiles, independent heade
 8. Preserve exact cents, explicit Unexplained, optional Dim schemas, one-to-one lookups, and existing currency rules. Never fabricate values to make the bridge reconcile or switch production into compatibility mode.
 9. Extend `data-mapping.ts`, parsing/worker messages, store actions, accounting projections, result types, and UI together when a feature crosses those boundaries. Preserve cancellation, confirmation invalidation, file cleanup, and both result views.
 10. Validate the change with relevant tests and `npm run build`; keep formatting consistent. Report the checks actually run and any verification limits. Do not claim planned Rules Engine, persistence, real email delivery, ERP posting, or external-dataset verification as completed features.
+11. Before moving code between modules, follow the module conventions in section 4 and read [docs/REFACTORING_REPORT.md](docs/REFACTORING_REPORT.md). Files listed there as cleanup candidates are unused or legacy but intentionally kept; confirm with the project owner before deleting any of them.

@@ -6,6 +6,7 @@ import {
   Database,
   Search,
 } from 'lucide-react'
+import { InformationNote } from '@/components/PageInformation'
 
 export interface InspectSelection {
   panel?: 'source' | 'insights'
@@ -48,7 +49,7 @@ export function Kpi({
         <span>{unit}</span>
       </h2>
       <strong className="financial-value">{value}</strong>
-      <p>{note}</p>
+      <InformationNote title={label}>{note}</InformationNote>
     </section>
   )
 }

@@ -309,20 +309,39 @@ test('default load fetches the bundled real workbook and remains independent of 
   const store = createAppStore()
   const savedFetch = globalThis.fetch
   const requests = []
+  const dataset = await readFile(
+    new URL(
+      '../docs/source/Nexa_Home_Recon_Dataset_Final.xlsx',
+      import.meta.url,
+    ),
+  )
   try {
     store.setEngineUnavailable('error', 'DuckDB unavailable for Raw')
     const original = rawOnly(store.getState())
     globalThis.fetch = async (url, options) => {
       requests.push({ url, signal: options.signal })
-      return new Response(arrayBuffer(), { status: 200 })
+      return new Response(dataset, { status: 200 })
     }
     await store.actions.loadExcelReference()
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].url, '/reference/excel-reference.xlsx')
+    assert.equal(requests[0].url, '/demo/Nexa_Home_Recon_Dataset_Final.xlsx')
     assert.equal(requests[0].signal.aborted, false)
     const active = selectActiveResult(store.getState())
     assert.equal(active.source, 'excel')
     assert.equal(active.workbook.fileName, REFERENCE_FILE_NAME)
+    assert.equal(active.workbook.exceptions.length, 7)
+    assert.ok(active.workbook.dashboard.cells.length > 0)
+    assert.equal(active.workbook.dashboard.manuals.length, 15)
+    assert.equal(
+      active.workbook.checks.find((row) => row.id === 'control-exceptions')
+        .expectedUSD,
+      7,
+    )
+    assert.ok(
+      active.workbook.dashboard.validations.some(
+        (row) => row.count === null && !row.status,
+      ),
+    )
     assert.equal(
       selectExcelReference(active.workbook, active.period).salesUSD,
       31_124_401,

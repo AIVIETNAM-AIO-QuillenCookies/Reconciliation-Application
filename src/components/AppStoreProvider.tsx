@@ -1,10 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useDuckDB } from '@/hooks/useDuckDB'
-import { AppStoreContext, createAppStore } from '@/lib/store'
+import { AppStoreContext, createAppStore, type AppStore } from '@/lib/store'
 
-export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(() =>
-    createAppStore(undefined, { ingestionMode: 'wizard' }),
+export function AppStoreProvider({
+  children,
+  instance,
+}: {
+  children: ReactNode
+  instance?: AppStore
+}) {
+  const [store] = useState(
+    () => instance ?? createAppStore(undefined, { ingestionMode: 'wizard' }),
   )
   const engine = useDuckDB()
 

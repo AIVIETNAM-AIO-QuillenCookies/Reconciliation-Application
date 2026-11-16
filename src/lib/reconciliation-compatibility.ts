@@ -1,9 +1,11 @@
 import type { FactSource } from './uploads.ts'
 import type { ReconciliationPeriod } from './reconciliation-types.ts'
+import {
+  quoteIdentifier as identifier,
+  quoteLiteral as literal,
+} from './sql-quoting.ts'
 
 export type SchemaMode = 'accounting' | 'compatible' | 'strict'
-const identifier = (value: string) => `"${value.replaceAll('"', '""')}"`
-const literal = (value: string) => `'${value.replaceAll("'", "''")}'`
 const normalized = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]/g, '')
 const text = (column: string) => `CAST(${identifier(column)} AS VARCHAR)`

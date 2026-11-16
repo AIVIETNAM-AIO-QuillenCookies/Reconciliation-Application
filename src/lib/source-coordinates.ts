@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx'
 import { validateHeaderRow } from './header-row.ts'
 import { selectedSheetRange } from './spreadsheet-range.ts'
 import { normalizeSpreadsheetValues } from './spreadsheet-values.ts'
+import { cachedWorkbook } from './workbook-cache.ts'
 
 interface CSVRecord {
   sourceRow: number
@@ -82,6 +83,7 @@ function csvRecords(text: string, delimiter: string): CSVRecord[] | null {
 export async function sourceRecordRows(
   file: File,
   headerRow: number,
+  sheetName?: string,
 ): Promise<number[] | null> {
   validateHeaderRow(headerRow)
   try {
@@ -93,14 +95,16 @@ export async function sourceRecordRows(
         Math.min(4, buffer.byteLength),
       )
       if (signature[0] !== 0x50 || signature[1] !== 0x4b) return null
-      const workbook = XLSX.read(buffer, {
-        type: 'array',
-        cellDates: false,
-        cellNF: true,
-        cellText: false,
-        sheets: 0,
-      })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const workbook =
+        cachedWorkbook(file) ??
+        XLSX.read(buffer, {
+          type: 'array',
+          cellDates: false,
+          cellNF: true,
+          cellText: false,
+          sheets: sheetName ?? 0,
+        })
+      const sheet = workbook.Sheets[sheetName ?? workbook.SheetNames[0]]
       if (!sheet?.['!ref']) return null
       const range = selectedSheetRange(sheet, headerRow)
       const normalized = normalizeSpreadsheetValues(

@@ -47,6 +47,8 @@ export function ProcessingDialog() {
       }}
     >
       <DialogContent
+        data-tour="processing-dialog"
+        data-processing-status={flow?.status ?? 'idle'}
         className="processing-dialog h-[min(720px,calc(100dvh-32px))] max-w-[1080px] gap-0"
         closeLabel="Ẩn tiến trình"
         onCloseAutoFocus={(event) => {
@@ -124,7 +126,12 @@ export function ProcessingDialog() {
           </div>
         )}
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-5 py-3">
-          <Button variant="ghost" size="sm" onClick={hide}>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-tour="processing-hide"
+            onClick={hide}
+          >
             <EyeOff className="size-4" />
             Ẩn tiến trình
           </Button>

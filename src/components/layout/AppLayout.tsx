@@ -11,9 +11,10 @@ import {
   ListFilter,
   Menu,
   Settings2,
-  ShieldCheck,
   Workflow,
   ClipboardCheck,
+  FileSpreadsheet,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +25,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { useDuckDB } from '@/hooks/useDuckDB'
+import { useConventionUnloadGuard } from '@/hooks/useConventionUnloadGuard'
 import { cn } from '@/lib/utils'
 import { OnboardingWizard } from '@/components/ingestion/OnboardingWizard'
 import { ProcessingDialog } from '@/components/processing/ProcessingDialog'
@@ -31,10 +33,19 @@ import { useAppStore } from '@/lib/store'
 import '@/dashboard-workspace.css'
 import '@/review-layout.css'
 import {
-  ExcelReferenceBanner,
+  GuideLauncher,
+  GuideSessionBanner,
+  GuideWorkspaceContent,
+} from '@/components/guide/InteractiveGuide'
+import {
   ExcelReferenceButton,
   ExcelReferenceDialog,
 } from '@/components/excel-reference/ExcelReferenceControls'
+import {
+  InformationNote,
+  PageInformationButton,
+  PageInformationProvider,
+} from '@/components/PageInformation'
 
 const navigation = [
   { to: '/', label: vi('Overview'), icon: LayoutDashboard },
@@ -69,9 +80,6 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div className="min-w-0">
           <p className="text-[13px] font-medium">{vi('Finance workspace')}</p>
-          <p className="mt-0.5 text-[11px] text-sidebar-muted">
-            {vi('Local session')}
-          </p>
         </div>
       </div>
       <nav aria-label={vi('Main navigation')} className="mt-8 space-y-1 px-3">
@@ -109,18 +117,6 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
       <div className="mt-auto px-6 pb-6 pt-10">
-        <ShieldCheck
-          className="mb-2.5 size-5 text-sidebar-accent"
-          aria-hidden="true"
-        />
-        <p className="text-xs font-medium text-sidebar-text">
-          {' ' + vi('Private in this browser') + ' '}
-        </p>
-        <p className="mt-1.5 text-[11px] leading-5 text-sidebar-muted">
-          {' ' + vi('Files stay in this tab.') + ' '}
-          <br />
-          {' ' + vi('Refresh clears your session.') + ' '}
-        </p>
         <div
           className="mt-5 flex items-center gap-2 border-t border-white/10 pt-4 text-[11px] text-sidebar-text"
           role="status"
@@ -147,12 +143,21 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppLayout() {
+  return (
+    <PageInformationProvider>
+      <AppLayoutContent />
+    </PageInformationProvider>
+  )
+}
+
+function AppLayoutContent() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { pathname } = useLocation()
   const currentPage =
     navigation.find((item) => item.to === pathname)?.label ?? vi('Overview')
   const { status, error, retry } = useDuckDB()
   const store = useAppStore()
+  useConventionUnloadGuard(store.conventions)
   const isReviewWorkspace =
     pathname === '/accounting-review' || pathname === '/exceptions'
   const isWorkspace =
@@ -161,8 +166,40 @@ export function AppLayout() {
     pathname === '/processing' ||
     pathname === '/accounting-review' ||
     pathname === '/exceptions'
+  const compactWorkspace =
+    (isWorkspace && pathname !== '/') || pathname === '/settings'
+  const active = store.activeResult
   return (
     <div className="min-h-svh">
+      <InformationNote title="Nguồn dữ liệu đang xem">
+        {active.source === 'excel' ? (
+          <>
+            <p>Kết quả tham chiếu Excel · {active.workbook.fileName}.</p>
+            <p>
+              Giá trị USD được đọc từ workbook. Trạng thái ngoại lệ, bằng chứng
+              và quyết định Raw được giữ riêng; xem Excel không xác nhận hoặc
+              đóng hồ sơ Raw.
+            </p>
+          </>
+        ) : (
+          <p>
+            Kết quả được tính từ nguồn Raw đã nhập và cấu hình của phiên hiện
+            tại.
+          </p>
+        )}
+      </InformationNote>
+      <InformationNote title="Phiên làm việc và quyền riêng tư">
+        <p>
+          Dữ liệu được xử lý trong trình duyệt này, không gửi lên máy chủ. Tải
+          lại trang sẽ xóa dữ liệu của phiên.
+        </p>
+        {status === 'error' && active.source === 'excel' && (
+          <p>
+            Engine Raw chưa sẵn sàng: {error.message}. Kết quả tham chiếu Excel
+            vẫn có thể xem độc lập.
+          </p>
+        )}
+      </InformationNote>
       <OnboardingWizard />
       <ProcessingDialog />
       <ExcelReferenceDialog />
@@ -210,6 +247,7 @@ export function AppLayout() {
             <span className="truncate font-medium">{currentPage}</span>
           </div>
           <div className="flex items-center gap-3 text-xs">
+            <GuideLauncher />
             {(store.pipelineProgress || store.excelReference.enabled) && (
               <Button
                 variant="outline"
@@ -226,13 +264,35 @@ export function AppLayout() {
               </Button>
             )}
             {!store.excelReference.enabled && <ExcelReferenceButton compact />}
-            <span className="hidden items-center gap-1.5 text-muted-foreground sm:flex">
-              <ShieldCheck
-                className="size-3.5 text-primary"
-                aria-hidden="true"
-              />
-              {' ' + vi('Browser only') + ' '}
-            </span>
+            {store.excelReference.enabled && (
+              <div className="app-source-controls">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="app-excel-source"
+                  onClick={store.openExcelReference}
+                  aria-label="Workbook Excel đang xem"
+                >
+                  <FileSpreadsheet size={15} aria-hidden="true" />
+                  <span>Excel</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="app-raw-return"
+                  onClick={store.disableExcelReference}
+                  aria-label="Tắt xem thử · Quay lại xử lý Raw"
+                  title="Quay lại xử lý Raw"
+                >
+                  <ArrowLeft size={14} aria-hidden="true" />
+                  <span>Quay lại Raw</span>
+                </Button>
+              </div>
+            )}
+            <PageInformationButton
+              page={currentPage}
+              scope={`${pathname}-${active.source}`}
+            />
             <span className="h-5 border-l" />
             <span
               className="flex size-8 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-primary"
@@ -254,9 +314,10 @@ export function AppLayout() {
             isReviewWorkspace && 'review-workspace-main',
             pathname === '/' && 'dashboard-suite-main',
             store.excelReference.enabled && isWorkspace && 'excel-source-main',
+            compactWorkspace && 'app-compact-workspace',
           )}
         >
-          {status === 'error' && (
+          {status === 'error' && !store.excelReference.enabled && (
             <div
               role="alert"
               className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/25 bg-red-50 p-4 text-sm text-destructive"
@@ -274,22 +335,14 @@ export function AppLayout() {
               </Button>
             </div>
           )}
-          {pathname !== '/' && <ExcelReferenceBanner />}
+          <GuideSessionBanner />
+          <GuideWorkspaceContent />
           {store.excelReference.enabled ? (
             <div className="excel-reference-outlet">
               <Outlet />
             </div>
           ) : (
             <Outlet />
-          )}
-          {!isWorkspace && (
-            <footer className="app-footer mt-7 flex flex-wrap items-center justify-between gap-2 border-t pt-4 text-[11px] text-muted-foreground">
-              <span>
-                reconcile. <span className="mx-1.5 text-border">/</span>
-                {' ' + vi('Revenue Auto-Pilot') + ' '}
-              </span>
-              <span>{vi('Local processing · Session only')}</span>
-            </footer>
           )}
         </main>
       </div>
@@ -309,15 +362,12 @@ export function PageHeading({
   actions?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="app-page-heading">
+      <InformationNote title={eyebrow}>{description}</InformationNote>
       <div>
-        <p className="mb-1.5 text-xs font-medium text-primary">{eyebrow}</p>
         <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.04em] sm:text-[30px]">
           {title}
         </h1>
-        <p className="mt-2 max-w-2xl text-[13px] leading-5 text-muted-foreground">
-          {description}
-        </p>
       </div>
       {actions && (
         <div className="flex shrink-0 items-center gap-2">{actions}</div>

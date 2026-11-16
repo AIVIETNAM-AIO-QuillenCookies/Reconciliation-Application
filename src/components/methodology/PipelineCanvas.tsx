@@ -9,7 +9,6 @@ import {
 } from 'react'
 import {
   Focus,
-  Hand,
   Minus,
   Plus,
   RotateCcw,
@@ -28,6 +27,7 @@ import {
   type WorkspaceSelection,
 } from '@/lib/model-workspace'
 import { PipelineNode } from './PipelineNode'
+import { InformationNote } from '@/components/PageInformation'
 import { PipelineEdge } from './PipelineEdge'
 
 export function PipelineCanvas({
@@ -269,12 +269,24 @@ export function PipelineCanvas({
             ))}
           </select>
         </div>
-        <span className="mw-meta">
-          {graph.nodes.length}
-          {' ' + vi('nodes ·') + ' '}
-          {graph.edges.length}
-          {' ' + vi('connections') + ' '}
-        </span>
+        <InformationNote title="Cách đọc sơ đồ">
+          <p>
+            {graph.nodes.length}
+            {' ' + vi('nodes ·') + ' '}
+            {graph.edges.length}
+            {' ' + vi('connections') + ' '}
+          </p>
+          <p>
+            {vi('Drag to explore')} · {vi('Ctrl + scroll to zoom')}
+          </p>
+          <p>
+            {scope === 'flow'
+              ? vi(
+                  'Primary connections shown. Choose All connections to explore adjustments and lookups.',
+                )
+              : vi('View controls do not change processing configuration.')}
+          </p>
+        </InformationNote>
       </div>
       <div
         ref={surface}
@@ -444,11 +456,6 @@ export function PipelineCanvas({
             />
           ))}
         </div>
-        <div className="mw-canvas-hint">
-          <Hand size={13} />
-          {' ' + vi('Drag to explore')}
-          <span>{vi('Ctrl + scroll to zoom')}</span>
-        </div>
       </div>
       <div
         className="mw-mobile-overview"
@@ -491,13 +498,6 @@ export function PipelineCanvas({
         })}
       </div>
       <footer className="mw-canvas-footer">
-        <span className="mw-meta">
-          {scope === 'flow'
-            ? vi(
-                'Primary connections shown. Choose All connections to explore adjustments and lookups.',
-              )
-            : vi('View controls do not change processing configuration.')}
-        </span>
         <div className="mw-viewport-controls">
           <button
             type="button"

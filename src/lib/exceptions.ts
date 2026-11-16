@@ -35,12 +35,15 @@ export type ReconciliationException = ExceptionBase &
     | { category: 'Unexplained'; type: 'Manual Journal' | 'Daily Variance' }
   )
 
+/** Default Exception Log filter: strictly greater than $200.00, no percentage test. */
+export const DEFAULT_EXCEPTION_THRESHOLD_CENTS = 20_000
+
 export function filterExceptions(
   rows: readonly ReconciliationException[],
   {
     query = '',
     category = 'All',
-    thresholdCents = 20_000,
+    thresholdCents = DEFAULT_EXCEPTION_THRESHOLD_CENTS,
     sort = { key: 'impact', direction: 'desc' },
   }: {
     query?: string

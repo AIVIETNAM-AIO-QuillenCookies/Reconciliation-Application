@@ -1,21 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import { ArrowDownUp, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import type { DashboardModel } from '@/lib/dashboard-model'
 import { useAppStore } from '@/lib/store'
-import { DashboardWidget, useDashboardWidgetExpanded } from './DashboardWidgets'
+import { InformationNote } from '@/components/PageInformation'
+import { DashboardWidget } from './DashboardWidgets'
+import { DataTable, Metric, Missing, TrendChart } from './DetailPrimitives'
+import { count, monthLabel, money, ratio } from './detail-format'
 
 export interface DashboardInspection {
   title: string
@@ -27,346 +16,9 @@ type TabProps = {
   model: DashboardModel
   onInspect: (selection: DashboardInspection) => void
 }
-const money = (value: number | null | undefined) =>
-  value == null
-    ? '—'
-    : new Intl.NumberFormat('vi-VN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(value)
-const ratio = (value: number | null | undefined) =>
-  value == null ? 'Không xác định' : `${money(value * 100)}%`
-const count = (value: number | null | undefined) =>
-  value == null ? '—' : value.toLocaleString('vi-VN')
-const compact = (value: number) =>
-  new Intl.NumberFormat('vi-VN', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
-const monthLabel = (value: string) =>
-  value.length === 10
-    ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`
-    : `${value.slice(5, 7)}/${value.slice(0, 4)}`
 const TEAL = '#148b82'
 const SLATE = '#7f93a6'
 const ORANGE = '#dd923b'
-
-function Missing({ children }: { children: ReactNode }) {
-  return (
-    <div className="dash-empty" role="status">
-      <strong>Chưa có dữ liệu để tính</strong>
-      <p>{children}</p>
-    </div>
-  )
-}
-function Metric({
-  label,
-  value,
-  description,
-  unit,
-}: {
-  label: string
-  value: string
-  description: string
-  unit?: string
-}) {
-  return (
-    <section className="dash-kpi" aria-label={label} title={description}>
-      <h3>{label}</h3>
-      <p className="financial-value">
-        {value} {unit && <small>{unit}</small>}
-      </p>
-      <small>{description}</small>
-    </section>
-  )
-}
-type Column<Row> = {
-  key: string
-  label: string
-  value: (row: Row) => string | number | null
-  render?: (row: Row) => ReactNode
-  numeric?: boolean
-}
-/** Locally paged tables never re-run the reconciliation processor. */
-function DataTable<Row extends { id: string }>({
-  label,
-  rows,
-  columns,
-  onSelect,
-  empty,
-}: {
-  label: string
-  rows: Row[]
-  columns: Column<Row>[]
-  onSelect?: (row: Row) => void
-  empty: ReactNode
-}) {
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState({ key: columns[0]?.key, ascending: true })
-  const [page, setPage] = useState(0)
-  const filtered = useMemo(() => {
-    const tokens = query.toLocaleLowerCase('vi').trim().split(/\s+/)
-    const column = columns.find((item) => item.key === sort.key)
-    return rows
-      .filter((row) => {
-        const text = columns
-          .map((item) => String(item.value(row) ?? ''))
-          .join(' ')
-          .toLocaleLowerCase('vi')
-        return tokens.every((token) => text.includes(token))
-      })
-      .sort((left, right) => {
-        const a = column?.value(left)
-        const b = column?.value(right)
-        const comparison =
-          typeof a === 'number' && typeof b === 'number'
-            ? a - b
-            : String(a ?? '').localeCompare(String(b ?? ''), 'vi')
-        return comparison * (sort.ascending ? 1 : -1)
-      })
-  }, [rows, columns, query, sort])
-  const lastPage = Math.max(0, Math.ceil(filtered.length / 20) - 1)
-  const currentPage = Math.min(page, lastPage)
-  return (
-    <>
-      <div className="dash-table-tools">
-        <label className="dash-search">
-          <Search size={14} aria-hidden="true" />
-          <input
-            aria-label={`Tìm trong ${label}`}
-            value={query}
-            placeholder="Tìm kiếm…"
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setPage(0)
-            }}
-          />
-        </label>
-        <span>{count(filtered.length)} dòng</span>
-      </div>
-      <div className="dash-table-scroll" tabIndex={0} aria-label={label}>
-        <table className="dash-table">
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={column.numeric ? 'dash-number' : undefined}
-                  aria-sort={
-                    sort.key === column.key
-                      ? sort.ascending
-                        ? 'ascending'
-                        : 'descending'
-                      : 'none'
-                  }
-                >
-                  <button
-                    onClick={() =>
-                      setSort({
-                        key: column.key,
-                        ascending:
-                          sort.key === column.key ? !sort.ascending : true,
-                      })
-                    }
-                    title={`Sắp xếp theo ${column.label}`}
-                  >
-                    {column.label} <ArrowDownUp size={11} aria-hidden="true" />
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered
-              .slice(currentPage * 20, (currentPage + 1) * 20)
-              .map((row) => (
-                <tr key={row.id}>
-                  {columns.map((column, index) => (
-                    <td
-                      key={column.key}
-                      data-label={column.label}
-                      className={column.numeric ? 'dash-number' : undefined}
-                    >
-                      {index === 0 && onSelect ? (
-                        <button
-                          className="dash-text-button"
-                          onClick={() => onSelect(row)}
-                        >
-                          {column.render?.(row) ?? column.value(row)}
-                        </button>
-                      ) : (
-                        (column.render?.(row) ?? column.value(row) ?? '—')
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        {!filtered.length && (
-          <div className="dash-empty">
-            {rows.length ? 'Không có dòng phù hợp tìm kiếm.' : empty}
-          </div>
-        )}
-      </div>
-      {lastPage > 0 && (
-        <div className="dash-pagination">
-          <button
-            aria-label={`Trang trước của ${label}`}
-            disabled={currentPage === 0}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <span>
-            Trang {currentPage + 1} / {lastPage + 1}
-          </span>
-          <button
-            aria-label={`Trang sau của ${label}`}
-            disabled={currentPage === lastPage}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      )}
-    </>
-  )
-}
-
-function TrendChart<Row extends { month: string }>({
-  rows,
-  series,
-  percent = false,
-  bars = false,
-  onMonth,
-}: {
-  rows: Row[]
-  series: { key: string; label: string; color: string }[]
-  percent?: boolean
-  bars?: boolean
-  onMonth: (month: string) => void
-}) {
-  const expanded = useDashboardWidgetExpanded()
-  const chartChildren = (
-    <>
-      <CartesianGrid vertical={false} stroke="#e7ecf0" strokeDasharray="3 4" />
-      <XAxis
-        dataKey="month"
-        tickFormatter={monthLabel}
-        tick={{ fontSize: expanded ? 13 : 11 }}
-        tickLine={false}
-        axisLine={false}
-      />
-      <YAxis
-        width={expanded ? 92 : 64}
-        tick={{ fontSize: expanded ? 13 : 11 }}
-        tickFormatter={(value: number) =>
-          percent ? `${compact(value * 100)}%` : compact(value)
-        }
-        tickLine={false}
-        axisLine={false}
-      />
-      <Tooltip
-        allowEscapeViewBox={{ x: false, y: false }}
-        wrapperStyle={{
-          maxWidth: 'min(360px, 85vw)',
-          whiteSpace: 'normal',
-          zIndex: 5,
-        }}
-        contentStyle={{
-          fontSize: expanded ? 13 : 12,
-          maxWidth: 'min(360px, 85vw)',
-          overflowWrap: 'anywhere',
-          borderRadius: 8,
-        }}
-        labelFormatter={(label) => monthLabel(String(label))}
-        formatter={(value) =>
-          percent
-            ? ratio(Number(value))
-            : `${money(Number(value))}${bars ? ' đơn' : ' USD'}`
-        }
-      />
-      <Legend wrapperStyle={{ fontSize: expanded ? 13 : 11 }} />
-      {series.map((item) =>
-        bars ? (
-          <Bar
-            key={item.key}
-            dataKey={item.key}
-            name={item.label}
-            fill={item.color}
-            radius={[3, 3, 0, 0]}
-            maxBarSize={30}
-            isAnimationActive={false}
-          />
-        ) : (
-          <Line
-            key={item.key}
-            dataKey={item.key}
-            name={item.label}
-            stroke={item.color}
-            strokeWidth={2}
-            dot={{ r: 2 }}
-            activeDot={{ r: 4 }}
-            connectNulls={false}
-            isAnimationActive={false}
-          />
-        ),
-      )}
-    </>
-  )
-  return (
-    <>
-      <div className="dash-chart">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-          {bars ? (
-            <BarChart
-              data={rows}
-              onClick={(state) => {
-                if (state.activeLabel != null)
-                  onMonth(String(state.activeLabel))
-              }}
-              margin={{ top: 8, left: 0, right: 12, bottom: 0 }}
-              accessibilityLayer
-            >
-              {chartChildren}
-            </BarChart>
-          ) : (
-            <LineChart
-              data={rows}
-              onClick={(state) => {
-                if (state.activeLabel != null)
-                  onMonth(String(state.activeLabel))
-              }}
-              margin={{ top: 8, left: 0, right: 12, bottom: 0 }}
-              accessibilityLayer
-            >
-              {chartChildren}
-            </LineChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-      <label className="dash-chart-detail-select">
-        Xem dữ liệu
-        <span className="sr-only">Chọn kỳ để xem chi tiết</span>
-        <select
-          aria-label="Xem dữ liệu biểu đồ theo kỳ"
-          value=""
-          onChange={(event) => {
-            if (event.target.value) onMonth(event.target.value)
-          }}
-        >
-          <option value="">Xem chi tiết kỳ/ngày…</option>
-          {rows.map((row) => (
-            <option key={row.month} value={row.month}>
-              {monthLabel(row.month)}
-            </option>
-          ))}
-        </select>
-      </label>
-    </>
-  )
-}
 
 export function DetailTab({ model, onInspect }: TabProps) {
   const store = useAppStore()
@@ -379,6 +31,31 @@ export function DetailTab({ model, onInspect }: TabProps) {
       to: `/exceptions?${new URLSearchParams({ tab: 'differences', q: id, threshold: '0', record: id, from: 'dashboard', returnTo: `${location.pathname}${location.search}` })}`,
     }))
   const relatedRecords = (storeKey: string, date?: string) => {
+    const active = store.activeResult
+    if (active.source === 'excel' && active.workbook.dashboard) {
+      const cells = active.workbook.dashboard.cells.filter(
+        (row) =>
+          row.storeKey === storeKey &&
+          model.selectedMonths.includes(row.date.slice(0, 7)) &&
+          (!date || row.date === date),
+      )
+      return {
+        rows: cells.flatMap((row) =>
+          row.sources.map((source) => ({
+            'Cửa hàng': row.storeKey,
+            Ngày: row.date,
+            File: active.workbook.fileName,
+            Sheet: source.sheetName,
+            'Dòng nguồn': source.sourceRow,
+            Trường: source.field,
+            'POS chuẩn hóa USD (tổng ô)': row.expectedUSD,
+            'GL USD (tổng ô)': row.glUSD,
+          })),
+        ),
+        links: [],
+        note: 'Truy vết các dòng chuẩn hóa trong workbook Excel; số tổng lấy từ toàn bộ dữ liệu trong phạm vi đã chọn.',
+      }
+    }
     const snapshot = store.reconciliationData?.glReview ?? store.glReview
     const records =
       model.source === 'raw'
@@ -449,8 +126,12 @@ export function DetailTab({ model, onInspect }: TabProps) {
     }
   }
   return (
-    <div className="dash-tab-body">
-      <div className="dash-kpis">
+    <div
+      className="dash-tab-body"
+      data-tour="dashboard-detail"
+      data-cell-count={detail.cellCount}
+    >
+      <div className="dash-kpis" data-tour="dashboard-detail-kpis">
         <Metric
           label="Ô cửa hàng × ngày"
           value={count(detail.cellCount)}
@@ -479,10 +160,9 @@ export function DetailTab({ model, onInspect }: TabProps) {
         />
       </div>
       {detail.reason && (
-        <details className="dash-scope-note">
-          <summary>Cơ sở chuẩn hóa và ngưỡng kiểm tra</summary>
-          <p>{detail.reason}</p>
-        </details>
+        <InformationNote title="Cơ sở chuẩn hóa và ngưỡng kiểm tra">
+          {detail.reason}
+        </InformationNote>
       )}
       <div className="dash-grid dash-grid-two dash-detail-layout dash-detail-grid">
         <DashboardWidget
@@ -709,18 +389,33 @@ export function QualityTab({ model, onInspect }: TabProps) {
   const quality = model.quality
   const returnTo = `${location.pathname}${location.search}`
   const raw = store.activeResult.source === 'raw'
+  const excel =
+    store.activeResult.source === 'excel'
+      ? store.activeResult.workbook.dashboard
+      : undefined
   const params = new URLSearchParams(location.search)
   const channel = params.get('channel') || 'ALL'
-  const manuals = raw
-    ? (store.glReview?.records || []).filter(
+  const manualEntries = raw
+    ? (store.glReview?.records || [])
+        .filter(
+          (row) =>
+            row.journalType === 'MANUAL' &&
+            !!row.period &&
+            model.selectedMonths.includes(row.period) &&
+            (channel === 'ALL' || channel === 'all' || row.channel === channel),
+        )
+        .map((row) => ({
+          ...row,
+          revenueUSD: row.revenueCents == null ? null : row.revenueCents / 100,
+        }))
+    : (excel?.manuals ?? []).filter(
         (row) =>
-          row.journalType === 'MANUAL' &&
-          !!row.period &&
           model.selectedMonths.includes(row.period) &&
           (channel === 'ALL' || channel === 'all' || row.channel === channel),
       )
-    : []
-  const completeManuals = raw && model.available && !!store.glReview?.complete
+  const manuals: (typeof manualEntries)[number][] = manualEntries
+  const completeManuals =
+    model.available && (raw ? !!store.glReview?.complete : !!excel)
   const reviewFor = (id: string) =>
     store.reviewCases.find((item) => item.recordIds.includes(id))
   const journalLink = (id: string) => {
@@ -734,6 +429,7 @@ export function QualityTab({ model, onInspect }: TabProps) {
     return `/accounting-review?${query}`
   }
   const evidenceLabel = (id: string) => {
+    if (!raw) return 'Chưa xác minh · tham chiếu Excel'
     const review = reviewFor(id)
     if (!review) return 'Chưa có hồ sơ rà soát'
     if (review.stale) return 'Cần xác minh lại'
@@ -746,13 +442,23 @@ export function QualityTab({ model, onInspect }: TabProps) {
       : 'Đã xác minh bằng chứng'
   }
   return (
-    <div className="dash-tab-body">
-      <div className="dash-kpis">
+    <div
+      className="dash-tab-body"
+      data-tour="dashboard-quality"
+      data-cancelled-orders={quality.cancelledOrders}
+      data-duplicate-exports={quality.removedDuplicateLines}
+      data-manual-journals={completeManuals ? manuals.length : undefined}
+    >
+      <div className="dash-kpis" data-tour="dashboard-quality-kpis">
         <Metric
           label="Giá trị hàng trả"
           value={money(quality.returnsUSD)}
           unit="USD"
-          description="Tổng giá trị giảm trừ theo ngày trả; cơ sở FX theo nguồn đang chọn."
+          description={
+            excel
+              ? 'Giá trị net_usd_daily theo ngày trả, theo quy tắc báo cáo.'
+              : 'Tổng giá trị giảm trừ theo ngày trả; cơ sở FX theo nguồn đang chọn.'
+          }
         />
         <Metric
           label="Tỷ lệ hàng trả"
@@ -775,7 +481,11 @@ export function QualityTab({ model, onInspect }: TabProps) {
           description="Số journal MANUAL trong GL; một hồ sơ có thể gồm nhiều journal."
         />
       </div>
-      {quality.reason && <p className="dash-scope-note">{quality.reason}</p>}
+      {quality.reason && (
+        <InformationNote title="Cơ sở hoàn trả và chất lượng">
+          {quality.reason}
+        </InformationNote>
+      )}
       <div className="dash-grid dash-grid-two dash-quality-layout dash-quality-grid">
         <DashboardWidget
           id="quality-return-rate"
@@ -851,9 +561,9 @@ export function QualityTab({ model, onInspect }: TabProps) {
           title="Bút toán tay và tình trạng bằng chứng"
           subtitle="Số tiền theo dấu doanh thu GL · mã tham chiếu chưa phải bằng chứng đã xác minh"
         >
-          <p className="dash-preview-note">
+          <InformationNote title="Bút toán tay · xem đầy đủ">
             Bản xem trước · phóng to để xem đủ kênh, diễn giải và mã tham chiếu.
-          </p>
+          </InformationNote>
           <DataTable
             label="bút toán tay"
             rows={manuals}
@@ -862,11 +572,26 @@ export function QualityTab({ model, onInspect }: TabProps) {
                 key: 'journal',
                 label: 'Mã bút toán',
                 value: (row) => row.journalId,
-                render: (row) => (
-                  <Link className="dash-text-button" to={journalLink(row.id)}>
-                    {row.journalId || 'Thiếu mã'}
-                  </Link>
-                ),
+                render: (row) =>
+                  raw ? (
+                    <Link className="dash-text-button" to={journalLink(row.id)}>
+                      {row.journalId || 'Thiếu mã'}
+                    </Link>
+                  ) : (
+                    <button
+                      className="dash-text-button"
+                      onClick={() =>
+                        onInspect({
+                          title: `Bút toán Excel · ${row.journalId}`,
+                          description:
+                            'Giá trị và mã tham chiếu từ GL chuẩn hóa trong workbook; chưa xác minh bằng chứng kế toán.',
+                          rows: [{ ...row }],
+                        })
+                      }
+                    >
+                      {row.journalId || 'Thiếu mã'}
+                    </button>
+                  ),
               },
               {
                 key: 'date',
@@ -882,11 +607,8 @@ export function QualityTab({ model, onInspect }: TabProps) {
               {
                 key: 'amount',
                 label: 'Doanh thu · USD',
-                value: (row) => row.revenueCents,
-                render: (row) =>
-                  money(
-                    row.revenueCents == null ? null : row.revenueCents / 100,
-                  ),
+                value: (row) => row.revenueUSD,
+                render: (row) => money(row.revenueUSD),
                 numeric: true,
               },
               {
@@ -920,7 +642,11 @@ export function QualityTab({ model, onInspect }: TabProps) {
         <DashboardWidget
           id="quality-checks"
           title="Kiểm tra chất lượng dữ liệu"
-          subtitle="Số trường hợp từ kiểm tra thực tế · không suy diễn lỗi từ khoản điều chỉnh"
+          subtitle={
+            excel
+              ? 'QC_Summary · toàn workbook · giữ nguyên kết quả đã ghi và ô chưa đánh giá'
+              : 'Số trường hợp từ kiểm tra thực tế · không suy diễn lỗi từ khoản điều chỉnh'
+          }
         >
           <DataTable
             label="kiểm tra chất lượng"
@@ -929,7 +655,7 @@ export function QualityTab({ model, onInspect }: TabProps) {
               { key: 'label', label: 'Kiểm tra', value: (row) => row.label },
               {
                 key: 'count',
-                label: 'Số trường hợp',
+                label: excel ? 'Số lỗi' : 'Số trường hợp',
                 value: (row) => row.count,
                 render: (row) => count(row.count),
                 numeric: true,
@@ -953,6 +679,16 @@ export function QualityTab({ model, onInspect }: TabProps) {
                             'Số trường hợp': row.count,
                             'Kết quả': row.status,
                             'Bảng nguồn': row.tableId,
+                            ...(excel
+                              ? {
+                                  'Giá trị thực tế': row.actual,
+                                  'Mong đợi': row.expected,
+                                  'Quy tắc': row.rule,
+                                  'Ghi chú': row.note,
+                                  Sheet: row.sourceSheet,
+                                  'Dòng nguồn': row.sourceRow,
+                                }
+                              : {}),
                           },
                         ],
                       })

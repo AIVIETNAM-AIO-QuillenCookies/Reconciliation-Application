@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readdir } from 'node:fs/promises'
 import { preview } from 'vite'
+import * as XLSX from 'xlsx'
 
 // HTTP checks against the built dist, never the development server. These do
 // not replace browser checks of Worker execution, layout or user interactions.
@@ -39,6 +40,7 @@ try {
       ...wasm.map((name) => `/assets/${name}`),
       '/favicon.svg',
       '/reference/excel-reference.xlsx',
+      '/demo/Nexa_Home_Recon_Dataset_Final.xlsx',
     ]),
   ]
 
@@ -59,6 +61,36 @@ try {
       // The adapter fetches arrayBuffer(), so XLSX needs valid ZIP bytes, not
       // a particular MIME. Vite preview may omit its optional Content-Type.
       assert.deepEqual([...bytes.slice(0, 2)], [80, 75], path)
+    }
+    if (path === '/demo/Nexa_Home_Recon_Dataset_Final.xlsx') {
+      const workbook = XLSX.read(bytes, { type: 'array', bookSheets: true })
+      assert.deepEqual(
+        workbook.SheetNames,
+        [
+          '01a_Nguon_POS',
+          '01b_Nguon_WEB',
+          '01c_Nguon_GL',
+          '01d_Nguon_Flash',
+          '01e_Master_Cua_Hang',
+          '01f_Master_Lich',
+          '01g_Master_TyGia_Ngay',
+          '01h_Master_TyGia_Thang',
+          '02_Giao_Dich_Chung',
+          '02a_POS_chuan_hoa',
+          '02b_Web_chuan_hoa',
+          '02c_GL_chuan_hoa',
+          '02d_Flash_chuan_hoa',
+          '03a_Doi_soat_Cua_hang',
+          '03b_Doi_soat_Online',
+          '03c_POS_Dong_trung',
+          'QC_Summary',
+          '04a_Cau_noi_Flash_GL',
+          '04b_Truy_vet',
+          '04c_So_sanh_ty_gia',
+          '05_Nhat_ky_ngoai_le',
+        ],
+        'production guide resource retains the original 21-sheet source and reference workbook',
+      )
     }
     console.log(`OK ${response.status} ${mime || '(no Content-Type)'} ${path}`)
   }

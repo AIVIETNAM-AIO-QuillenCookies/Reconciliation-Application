@@ -13,14 +13,9 @@ import {
   type BarShapeProps,
 } from 'recharts'
 import type { DashboardModel } from '@/lib/dashboard-model'
-import { money, percent, shortMonth } from '@/lib/dashboard-format'
+import { compact, money, percent, shortMonth } from '@/lib/dashboard-format'
 import { useDashboardWidgetExpanded } from './DashboardWidgets'
 
-const compact = (value: number) =>
-  new Intl.NumberFormat('vi-VN', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
 const grid = (
   <CartesianGrid vertical={false} stroke="#e8eef0" strokeDasharray="3 4" />
 )
@@ -300,6 +295,21 @@ function VerticalWaterfallTick({
     </text>
   )
 }
+const signedCompact = new Intl.NumberFormat('vi-VN', {
+  notation: 'compact',
+  maximumFractionDigits: 2,
+  signDisplay: 'exceptZero',
+})
+const totalCompact = new Intl.NumberFormat('vi-VN', {
+  notation: 'compact',
+  maximumFractionDigits: 2,
+})
+/** Compact step value: signed for adjustments, plain for the Flash/GL totals. */
+const bridgeValueLabel = (row: BridgeRow) =>
+  (row.kind === 'adjustment' ? signedCompact : totalCompact).format(
+    Object.is(row.amountUSD, -0) ? 0 : row.amountUSD,
+  )
+
 export function DashboardWaterfall({
   rows,
   onSelect,
@@ -348,7 +358,12 @@ export function DashboardWaterfall({
               data={data}
               layout={vertical ? 'vertical' : 'horizontal'}
               accessibilityLayer
-              margin={{ top: 10, right: 10, bottom: 0, left: 0 }}
+              margin={{
+                top: 18,
+                right: vertical ? 64 : 10,
+                bottom: 0,
+                left: 0,
+              }}
             >
               {grid}
               {vertical ? (
@@ -424,6 +439,43 @@ export function DashboardWaterfall({
                         : row.category === 'rounding'
                           ? '#91a1ae'
                           : '#d89a55'
+                  // Totals and increases are labelled at their high end,
+                  // reductions at their low end, so labels never sit on a bar.
+                  const left = vertical
+                    ? Math.min(props.x, props.x + props.width)
+                    : props.x
+                  const top = vertical
+                    ? props.y
+                    : Math.min(props.y, props.y + props.height)
+                  const length = Math.max(
+                    2,
+                    Math.abs(vertical ? props.width : props.height),
+                  )
+                  const thickness = Math.abs(
+                    vertical ? props.height : props.width,
+                  )
+                  const centre = (vertical ? top : left) + thickness / 2
+                  const fontSize = expanded ? 12 : 10
+                  const rising = row.kind !== 'adjustment' || row.amountUSD >= 0
+                  const label: {
+                    x: number
+                    y: number
+                    anchor: 'start' | 'middle' | 'end'
+                  } = vertical
+                    ? rising
+                      ? {
+                          x: left + length + 5,
+                          y: centre + fontSize / 3,
+                          anchor: 'start',
+                        }
+                      : { x: left - 5, y: centre + fontSize / 3, anchor: 'end' }
+                    : rising
+                      ? { x: centre, y: top - 5, anchor: 'middle' }
+                      : {
+                          x: centre,
+                          y: top + length + fontSize + 2,
+                          anchor: 'middle',
+                        }
                   return (
                     <g
                       role="button"
@@ -440,52 +492,35 @@ export function DashboardWaterfall({
                     >
                       <title>{`${row.label}: ${money(row.amountUSD)} USD; lũy kế ${money(row.endUSD)} USD`}</title>
                       <rect
-                        x={
-                          vertical
-                            ? Math.min(props.x, props.x + props.width) - 4
-                            : props.x
-                        }
-                        y={
-                          vertical
-                            ? props.y
-                            : Math.min(props.y, props.y + props.height) - 4
-                        }
-                        width={
-                          vertical
-                            ? Math.max(10, Math.abs(props.width) + 8)
-                            : props.width
-                        }
-                        height={
-                          vertical
-                            ? Math.abs(props.height)
-                            : Math.max(10, Math.abs(props.height) + 8)
-                        }
+                        x={vertical ? left - 4 : left}
+                        y={vertical ? top : top - 4}
+                        width={vertical ? Math.max(10, length + 8) : thickness}
+                        height={vertical ? thickness : Math.max(10, length + 8)}
                         fill="transparent"
                       />
                       <rect
-                        x={
-                          vertical
-                            ? Math.min(props.x, props.x + props.width)
-                            : props.x
-                        }
-                        y={
-                          vertical
-                            ? props.y
-                            : Math.min(props.y, props.y + props.height)
-                        }
-                        width={
-                          vertical
-                            ? Math.max(2, Math.abs(props.width))
-                            : props.width
-                        }
-                        height={
-                          vertical
-                            ? Math.abs(props.height)
-                            : Math.max(2, Math.abs(props.height))
-                        }
+                        x={left}
+                        y={top}
+                        width={vertical ? length : thickness}
+                        height={vertical ? thickness : length}
                         rx={3}
                         fill={fill}
                       />
+                      {thickness >= (vertical ? 12 : 34) && (
+                        <text
+                          x={label.x}
+                          y={label.y}
+                          textAnchor={label.anchor}
+                          fontSize={fontSize}
+                          fontWeight={row.kind === 'adjustment' ? 500 : 650}
+                          fill={
+                            row.kind === 'adjustment' ? '#4c626e' : '#24404d'
+                          }
+                          pointerEvents="none"
+                        >
+                          {bridgeValueLabel(row)}
+                        </text>
+                      )}
                     </g>
                   )
                 }}

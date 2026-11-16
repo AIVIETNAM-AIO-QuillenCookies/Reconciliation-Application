@@ -434,6 +434,182 @@ test('one header selector survives repeated parsing transitions and step changes
         assert.equal(store.getState().mappingDrafts[next.id]?.master, undefined)
       },
     )
+    await t.test(
+      'automatic Master walkthrough operates real dropdowns and composite relationship controls',
+      async () => {
+        const { demonstrateGuideMaster } = await server.ssrLoadModule(
+          '/src/lib/guide-master-actions.ts',
+        )
+        const { defaultRelationship } = await server.ssrLoadModule(
+          '/src/lib/master-data.ts',
+        )
+        const dim = {
+          id: 'guide-dim',
+          source: 'Dim',
+          headerRow: 1,
+          file: new File(['fixture'], 'Guide master.xlsx'),
+        }
+        const roleSheets = {
+          store: {
+            name: 'Stores',
+            columns: {
+              pos_store_id: 'POS ID',
+              finance_store_code: 'Finance ID',
+            },
+          },
+          calendar: {
+            name: 'Dates',
+            columns: {
+              date: 'Calendar date',
+              period: 'Period',
+              working_day: 'Working day',
+            },
+          },
+          fxDaily: {
+            name: 'Daily FX',
+            columns: { date: 'Rate date', currency: 'Currency', rate: 'Value' },
+          },
+          fxMonthEnd: {
+            name: 'Monthly FX',
+            columns: {
+              period: 'Rate month',
+              currency: 'Currency',
+              rate: 'Value',
+            },
+          },
+        }
+        const sheets = Object.values(roleSheets).map(({ name, columns }) => ({
+          sheetName: name,
+          headerRow: 1,
+          headers: Object.values(columns),
+          rows: [],
+          hasMoreRows: false,
+        }))
+        const preset = {
+          revision: 1,
+          fileId: dim.id,
+          sheets: Object.fromEntries(
+            sheets.map((sheet) => [sheet.sheetName, { headerRow: 1 }]),
+          ),
+          roles: Object.fromEntries(
+            Object.entries(roleSheets).map(([role, value]) => [
+              role,
+              {
+                usage: 'enabled',
+                sheetName: value.name,
+                columns: value.columns,
+                relationships: [
+                  {
+                    ...defaultRelationship(role),
+                    id: `test-${role}`,
+                    ...(role === 'calendar'
+                      ? { outputs: ['working_day', 'period'] }
+                      : {}),
+                  },
+                ],
+              },
+            ]),
+          ),
+        }
+        await act(async () => {
+          store.actions.setFiles((previous) => [
+            ...previous.filter((file) => file.source !== 'Dim'),
+            dim,
+          ])
+          store.actions.setFilePreview(
+            dim.id,
+            dim.file,
+            'Dim',
+            sheets[0],
+            sheets,
+          )
+          store.actions.openSourceOnboarding('Dim')
+        })
+        const changes = []
+        const unsubscribe = store.subscribe(() => {
+          changes.push(
+            structuredClone(
+              store.getState().mappingDrafts[dim.id]?.master?.roles,
+            ),
+          )
+        })
+        const signal = new AbortController().signal
+        try {
+          for (const role of Object.keys(roleSheets)) {
+            await act(async () =>
+              demonstrateGuideMaster(role, preset, store.actions, signal),
+            )
+            assert.deepEqual(
+              store.getState().mappingDrafts[dim.id].master.roles[role],
+              preset.roles[role],
+            )
+            assert.equal(
+              document
+                .querySelector('[data-tour="master-tab-relationships"]')
+                .getAttribute('aria-selected'),
+              'true',
+            )
+            const relationship = preset.roles[role].relationships[0]
+            assert.ok(
+              document.querySelector(
+                `[data-tour="master-relation-${relationship.id}"]`,
+              ),
+              'configured join should be visible in the real form',
+            )
+            for (const [index, key] of relationship.keys.entries()) {
+              assert.equal(
+                document
+                  .querySelector(
+                    `[data-tour="master-relation-${relationship.id}-key-type-${index}"]`,
+                  )
+                  .textContent.trim(),
+                key.type,
+              )
+            }
+          }
+          assert.ok(
+            changes.some(
+              (roles) =>
+                roles.store.usage === 'enabled' && roles.store.sheetName === '',
+            ),
+            'real usage selection should precede choosing its worksheet',
+          )
+          assert.ok(
+            changes.some(
+              (roles) =>
+                roles.store.columns.pos_store_id === 'POS ID' &&
+                !roles.store.columns.finance_store_code,
+            ),
+            'column mappings should be selected individually through their handlers',
+          )
+          assert.equal(
+            changes.at(-1).fxDaily.relationships[0].keys.length,
+            2,
+            'daily FX retains the date AND currency join',
+          )
+          const beforeAbort = JSON.stringify(
+            store.getState().mappingDrafts[dim.id].master.roles,
+          )
+          const cancelled = new AbortController()
+          cancelled.abort(new Error('cancel Master demo'))
+          await assert.rejects(
+            demonstrateGuideMaster(
+              'store',
+              preset,
+              store.actions,
+              cancelled.signal,
+            ),
+            /cancel Master demo/,
+          )
+          assert.equal(
+            JSON.stringify(store.getState().mappingDrafts[dim.id].master.roles),
+            beforeAbort,
+          )
+        } finally {
+          unsubscribe()
+        }
+      },
+    )
     assert.deepEqual(
       errors.filter((message) =>
         /same key|unique.*key|not wrapped in act/i.test(message),

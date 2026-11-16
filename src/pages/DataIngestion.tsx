@@ -8,7 +8,6 @@ import {
   AlertCircle,
   LoaderCircle,
   Plus,
-  ShieldCheck,
   Files,
   ArrowUpRight,
 } from 'lucide-react'
@@ -19,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { sourceStatus } from '@/lib/source-status'
 import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import { InformationNote } from '@/components/PageInformation'
 
 const roles = {
   POS: 'Receipt lines, discounts and duplicate exports.',
@@ -49,12 +49,31 @@ export function DataIngestion() {
           'Bring your sales and ledger exports into one traceable reconciliation.',
         )}
         actions={
-          <Button onClick={openOnboarding}>
+          <Button data-tour="ingestion-import" onClick={openOnboarding}>
             <Plus className="size-4" />
             {files.length ? 'Continue import' : 'Import data'}
           </Button>
         }
       />
+      <InformationNote title="Vai trò các nguồn dữ liệu">
+        <dl>
+          {ONBOARDING_STEPS.map((step) => (
+            <div key={step.source}>
+              <dt>{step.label}</dt>
+              <dd>{vi(roles[step.source])}</dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          {files.length} tệp đã chọn. Master là nguồn tham chiếu tùy chọn. Định
+          dạng hỗ trợ: CSV / XLSX.
+        </p>
+        <p>
+          {vi(
+            'Mappings confirmed. Editing a file or mapping requires a new confirmation before the next run.',
+          )}
+        </p>
+      </InformationNote>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-white px-5 py-4">
         <div className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-primary">
@@ -64,10 +83,6 @@ export function DataIngestion() {
             <p className="text-[13px] font-semibold">
               {readyCount}
               {' ' + vi('of 4 required sources mapped') + ' '}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {files.length} {files.length === 1 ? 'file' : 'files'}
-              {' ' + vi('selected · Master data is optional') + ' '}
             </p>
           </div>
         </div>
@@ -102,15 +117,11 @@ export function DataIngestion() {
       {confirmedMappings && !isProcessing && (
         <div className="notice mb-5">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-          {' ' +
-            vi(
-              'Mappings confirmed. Editing a file or mapping requires a new confirmation before the next run.',
-            ) +
-            ' '}
+          Cấu hình đã xác nhận
         </div>
       )}
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {ONBOARDING_STEPS.map((step, index) => {
+        {ONBOARDING_STEPS.map((step) => {
           const info = sourceStatus(step.source, files, mappingDrafts)
           const Icon =
             info.state === 'ready'
@@ -139,9 +150,6 @@ export function DataIngestion() {
                   </span>
                 </div>
                 <h2 className="section-title">{step.label}</h2>
-                <p className="mt-1.5 min-h-10 text-[13px] leading-5 text-muted-foreground">
-                  {roles[step.source]}
-                </p>
                 <div className="my-4 min-h-12 rounded-lg bg-muted/70 px-3 py-2.5 text-xs">
                   {info.files.length ? (
                     <>
@@ -204,28 +212,13 @@ export function DataIngestion() {
                   </Button>
                 </div>
               </div>
-              <div className="border-t px-5 py-2.5 text-[11px] text-muted-foreground">
-                {' ' + vi('Source') + ' '}
-                {String(index + 1).padStart(2, '0')}{' '}
-                <span className="mx-1">·</span> CSV / XLSX
-              </div>
             </section>
           )
         })}
       </div>
-      <div className="notice mt-5">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-        <p>
-          <strong className="font-medium text-foreground">
-            {' ' + vi('Processed locally.') + ' '}
-          </strong>{' '}
-          {' ' +
-            vi(
-              'Files, mappings and results live only in this browser tab and are lost on refresh. Up to 20 files, 50 MiB per file and 200 MiB per batch.',
-            ) +
-            ' '}
-        </p>
-      </div>
+      <InformationNote title="Giới hạn nhập dữ liệu">
+        <p>Tối đa 20 tệp, 50 MiB mỗi tệp và 200 MiB mỗi lần nhập.</p>
+      </InformationNote>
     </>
   )
 }

@@ -8,6 +8,7 @@ export interface SpreadsheetRequest {
   headerRow?: number
   format?: 'csv' | 'xlsx'
   selectedSheets?: Record<string, { headerRow: number }>
+  sheetName?: string
 }
 export interface SpreadsheetResponse {
   sheets?: DecodedSheet[]

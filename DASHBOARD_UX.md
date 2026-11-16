@@ -1,5 +1,7 @@
 # Bố cục và phóng to dashboard
 
+Đối chiếu code bổ sung ngày **13/11/2026**, commit `ed969a42233dfe191e6aac054a156c73ce8e55fc`. Phạm vi dữ liệu và giới hạn nghiệp vụ xem [DASHBOARD_REVIEW.md](DASHBOARD_REVIEW.md) và [bản đồ ứng dụng nghiên cứu](docs/RESEARCH_APPLICATION_MAP.md).
+
 Đợt cải thiện này chỉ thay đổi cách trình bày và tương tác. Lớp chỉ tiêu, công thức, dữ liệu và nghiệp vụ đối soát được giữ nguyên.
 
 ## Cách dùng
@@ -25,6 +27,8 @@ Biểu đồ dùng ResizeObserver của Recharts để đo lại vùng chứa. W
 
 ## Kiểm chứng và giới hạn
 
-`npm.cmd test` đạt **226/226** kiểm thử. Kiểm thử mới xác nhận DOM bảng ổn định, tìm kiếm/sắp xếp/trang/cuộn được giữ, Escape và focus, không mở nhầm từ thao tác dữ liệu, cả bốn tab dùng cùng dialog, đổi nguồn đóng nội dung cũ và không gọi lại processor. SVG đo lại từ 650 → 1250 → 1020 px khi thay đổi vùng chứa giả lập. Build, lint và kiểm tra định dạng được chạy trên PowerShell; lint còn các cảnh báo hiện có ngoài phần UI mới, build còn cảnh báo bundle lớn.
+Lần rà soát tài liệu ngày 13/11/2026 đã chạy nhóm kiểm thử được liệt kê tại [EXCEL_REFERENCE_PREVIEW.md](EXCEL_REFERENCE_PREVIEW.md#kiểm-chứng): **42/42 đạt**, gồm [dashboard-expansion.test.mjs](tests/dashboard-expansion.test.mjs). Nhóm expansion xác minh dùng chung dialog, giữ DOM và trạng thái bảng, Escape/focus, đổi nguồn và không gọi lại processor trong môi trường jsdom. Chưa chạy trình duyệt thực tế trong lần này.
+
+Ghi chép của đợt cải thiện UI trước đó: `npm.cmd test` đạt **226/226** kiểm thử. Kiểm thử mới xác nhận DOM bảng ổn định, tìm kiếm/sắp xếp/trang/cuộn được giữ, Escape và focus, không mở nhầm từ thao tác dữ liệu, cả bốn tab dùng cùng dialog, đổi nguồn đóng nội dung cũ và không gọi lại processor. SVG đo lại từ 650 → 1250 → 1020 px khi thay đổi vùng chứa giả lập. Build, lint và kiểm tra định dạng được chạy trên PowerShell; lint còn các cảnh báo hiện có ngoài phần UI mới, build còn cảnh báo bundle lớn. Kết quả toàn dự án hiện tại được ghi tại [RELEASE_CHECK.md](RELEASE_CHECK.md).
 
 Tệp đính kèm của đợt này chỉ có yêu cầu văn bản; không có ảnh dashboard để mở đối chiếu. CUA trả về `apps: []`, `browsers: []`, nên chưa thể chụp ảnh hoặc xác nhận trực quan tại 1920×1080, 1440×900 và 1366×768. Kiểm thử DOM/ResizeObserver không thay thế kiểm tra overflow và cân đối bằng trình duyệt thực.

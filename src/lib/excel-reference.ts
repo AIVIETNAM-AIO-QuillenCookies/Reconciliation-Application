@@ -68,6 +68,8 @@ export interface ExcelReferenceWorkbook {
   details: ReferenceDetail[]
   checks: ReferenceCheck[]
   toleranceUSD: number
+  /** Prepared Nexa outputs; independent of the Raw engine and review state. */
+  dashboard?: import('./excel-dashboard.ts').ExcelDashboardData
 }
 export interface ReferenceSelection {
   months: string[]
@@ -84,7 +86,13 @@ export interface ReferenceSelection {
   available: boolean
 }
 export type ReferenceParseStage = 'read' | 'validate' | 'prepare'
-const TOLERANCE_USD = 0.01
+/** Dataset controls are explicit; the original bridge workbook contains ten exceptions. */
+export interface ReferenceParseOptions {
+  expectedExceptionCount?: number
+}
+/** Arithmetic tolerance of the Excel adapter (USD). Documented on the conventions page. */
+export const REFERENCE_TOLERANCE_USD = 0.01
+const TOLERANCE_USD = REFERENCE_TOLERANCE_USD
 const normalize = (value: unknown) =>
   String(value ?? '')
     .normalize('NFD')
@@ -151,7 +159,10 @@ function classify(
     chuagiaithichduoc: 'UNEXPLAINED',
     chuagiaithich: 'UNEXPLAINED',
   }
-  return { kind: 'adjustment', detailCodes: codes[key] ? [codes[key]] : [] }
+  const detailCode =
+    codes[key] ??
+    Object.entries(codes).find(([prefix]) => key.startsWith(prefix))?.[1]
+  return { kind: 'adjustment', detailCodes: detailCode ? [detailCode] : [] }
 }
 
 export function referencePeriodMonths(
@@ -219,7 +230,14 @@ export async function parseExcelReference(
   buffer: ArrayBuffer | Uint8Array,
   fileName: string,
   onStage?: (stage: ReferenceParseStage) => void,
+  options: ReferenceParseOptions = {},
 ): Promise<ExcelReferenceWorkbook> {
+  const expectedExceptionCount = options.expectedExceptionCount ?? 10
+  if (
+    !Number.isSafeInteger(expectedExceptionCount) ||
+    expectedExceptionCount < 0
+  )
+    throw new Error('Số ngoại lệ đối chiếu phải là số nguyên không âm.')
   onStage?.('read')
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b)
@@ -227,11 +245,21 @@ export async function parseExcelReference(
       'Không đọc được workbook XLSX. Hãy chọn đúng file tham chiếu Excel.',
     )
   const XLSX = await import('xlsx')
-  const workbook = XLSX.read(bytes, {
+  let workbook = XLSX.read(bytes, {
     type: 'array',
     cellDates: false,
     cellText: false,
   })
+  const nexa = !!workbook.Sheets['02a_POS_chuan_hoa']
+  if (nexa && !workbook.Sheets.Cau_noi) {
+    const { createGuideReferenceFile } = await import('./guide-reference.ts')
+    const compatible = createGuideReferenceFile(workbook)
+    workbook = XLSX.read(await compatible.arrayBuffer(), {
+      type: 'array',
+      cellDates: false,
+      cellText: false,
+    })
+  }
   onStage?.('validate')
   // Let the progress screen paint before inspecting all detail records.
   await new Promise<void>((resolve) => setTimeout(resolve, 0))
@@ -527,7 +555,7 @@ export async function parseExcelReference(
       'control-exceptions',
       'Số ngoại lệ tham chiếu',
       exceptions.length,
-      10,
+      options.expectedExceptionCount ?? (nexa ? 7 : 10),
       null,
       'records',
     ),
@@ -541,6 +569,13 @@ export async function parseExcelReference(
     details,
     checks,
     toleranceUSD: TOLERANCE_USD,
+    ...(nexa
+      ? {
+          dashboard: (await import('./excel-dashboard.ts')).readExcelDashboard(
+            workbook,
+          ),
+        }
+      : {}),
   }
 }
 

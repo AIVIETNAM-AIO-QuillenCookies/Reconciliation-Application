@@ -8,13 +8,9 @@ import {
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
-  ClipboardCheck,
   FileSearch,
   History,
   Search,
-  ShieldCheck,
-  Undo2,
-  X,
   SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,1197 +22,27 @@ import {
 } from '@/components/ui/dialog'
 import { ReconciliationRunStatus } from '@/components/ReconciliationRunStatus'
 import { useAppStore } from '@/lib/store'
+import { InformationNote } from '@/components/PageInformation'
 import { ReferenceAccountingSummary } from '@/components/excel-reference/ReferenceViews'
-import { formatUSD } from '@/lib/format-money'
-import type {
-  GLRecord,
-  GLPatch,
-  GLReviewSnapshot,
-  GLClassification,
-  GLCaseStatus,
-} from '@/lib/gl-review'
-import type { GLReviewCase } from '@/lib/accounting-review'
-import { transferIssue } from '@/lib/accounting-review'
+import type { GLRecord } from '@/lib/gl-review'
 import { REVIEW_LAYOUT } from '@/lib/review-layout'
+import {
+  RecordInspector,
+  type InspectorTab,
+} from '@/components/accounting-review/RecordInspector'
+import { TransformationHistory } from '@/components/accounting-review/TransformationHistory'
+import {
+  classificationLabels,
+  displayChannel,
+  money,
+  reviewStatusLabels,
+} from '@/components/accounting-review/review-format'
 import '@/accounting-review.css'
 
-const classificationLabels: Record<GLClassification, string> = {
-  shipping: 'Phí vận chuyển',
-  channel_transfer: 'Chuyển kênh',
-  unexplained: 'Chưa giải thích',
-  other: 'Nghiệp vụ khác',
-}
-const reviewStatusLabels: Record<GLCaseStatus, string> = {
-  open: 'Chờ xác minh',
-  in_progress: 'Đang xử lý',
-  reviewed: 'Đã xem · chưa giải quyết',
-  confirmed: 'Đã xác nhận',
-}
-const money = (cents: number | null | undefined) =>
-  cents == null ? 'Không đọc được' : formatUSD(cents)
-const displayChannel = (record: GLRecord) =>
-  record.channel === 'UNALLOCATED' || record.storeKey === '-1'
-    ? 'Chưa phân bổ'
-    : record.channel || 'Chưa rõ kênh'
-
-export function GLDiagnosticsView({
-  snapshot,
-  expanded = false,
-}: {
-  snapshot: GLReviewSnapshot
-  expanded?: boolean
-}) {
-  return (
-    <details className="accounting-diagnostics" open={expanded || undefined}>
-      <summary>
-        Chẩn đoán GL · {snapshot.diagnostics.length} lỗi kiểm tra ·{' '}
-        {snapshot.records.length.toLocaleString('vi-VN')} dòng nguồn
-      </summary>
-      <p className="mt-2 text-xs leading-6 text-muted-foreground">
-        {snapshot.complete
-          ? 'Các dòng GL có thể tính toán. Khoản chưa phân bổ được giữ trong tổng GL, với khóa kỹ thuật -1.'
-          : 'Đang chặn kết quả GL, cầu nối và chênh lệch phụ thuộc. Sửa cấu hình nguồn hoặc đề xuất điều chỉnh có lý do rồi chạy lại.'}
-      </p>
-      {snapshot.diagnostics.length > 0 && (
-        <div className="diagnostics-scroll">
-          <table className="accounting-table">
-            <thead>
-              <tr>
-                <th>Mã lỗi / Bút toán</th>
-                <th>Trường / giá trị</th>
-                <th>Dòng nguồn</th>
-                <th>Nguyên nhân</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.diagnostics.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    {item.code}
-                    <small>{item.journalId || 'Thiếu ID'}</small>
-                  </td>
-                  <td>
-                    {item.field}
-                    <small>{item.value ?? '(trống)'}</small>
-                  </td>
-                  <td>
-                    {item.fileName}
-                    <small>
-                      {item.sheetName} ·{' '}
-                      {item.sourceRow === null
-                        ? 'Chưa xác định dòng vật lý'
-                        : `dòng ${item.sourceRow}`}
-                    </small>
-                  </td>
-                  <td className="max-w-96 whitespace-normal">
-                    {item.reason}
-                    <small>
-                      {item.blocking
-                        ? 'Chặn đầu ra phụ thuộc'
-                        : 'Cần rà soát nghiệp vụ'}
-                    </small>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <Button asChild variant="outline" size="sm" className="mt-2">
-        <Link to="/accounting-review">
-          <FileSearch className="size-3.5" />
-          Rà soát kế toán
-        </Link>
-      </Button>
-    </details>
-  )
-}
-
-export function AccountingExceptionCases() {
-  const { reviewCases, glReview } = useAppStore()
-  if (!reviewCases.length) return null
-  const open = reviewCases.filter(
-    (item) => item.status !== 'confirmed' || item.stale,
-  )
-  return (
-    <section
-      className="accounting-exception-cases"
-      aria-label="Ngoại lệ kế toán dùng chung"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>
-          <ClipboardCheck className="mr-2 inline size-4 text-primary" />
-          {reviewCases.length} hồ sơ rà soát · {open.length} hồ sơ còn mở
-        </h2>
-        <Link
-          className="text-xs font-medium"
-          to="/accounting-review?from=exceptions"
-        >
-          Mở hàng chờ <ArrowRight className="inline size-3" />
-        </Link>
-      </div>
-      <details className="mt-2 text-xs leading-5 text-muted-foreground">
-        <summary className="cursor-pointer">
-          Phạm vi hồ sơ & cách đọc số tiền
-        </summary>
-        <p className="mt-1">
-          Dùng chung dữ liệu với Rà soát kế toán. Một hồ sơ có thể liên quan
-          nhiều bút toán. Các kiểm soát chứng từ không lọc theo ngưỡng tiền; giá
-          trị hồ sơ không cộng thêm vào tổng rủi ro đối soát.
-        </p>
-      </details>
-      <div className="case-list">
-        {reviewCases.map((item) => {
-          const related =
-            glReview?.records.filter((r) => item.recordIds.includes(r.id)) || []
-          const periods = [
-            ...new Set(related.map((r) => r.period).filter(Boolean)),
-          ]
-          const complete =
-            related.length === item.recordIds.length &&
-            related.every((r) => r.revenueCents !== null)
-          return (
-            <Link
-              className="case-link"
-              key={item.id}
-              to={`/accounting-review?case=${encodeURIComponent(item.id)}&from=exceptions`}
-            >
-              <span>
-                <strong>{classificationLabels[item.classification]}</strong>
-                <p
-                  className="case-identifiers mt-1"
-                  title={related.map((r) => r.journalId).join(', ')}
-                >
-                  {item.recordIds
-                    .map(
-                      (id) =>
-                        glReview?.records.find((r) => r.id === id)?.journalId ||
-                        id,
-                    )
-                    .join(', ')}
-                </p>
-                <span className="case-meta">
-                  <span>Kỳ: {periods.join(', ') || 'Chưa rõ'}</span>
-                  <span className="financial-value">
-                    Doanh thu:{' '}
-                    {complete
-                      ? money(
-                          related.reduce(
-                            (sum, r) => sum + (r.revenueCents || 0),
-                            0,
-                          ),
-                        )
-                      : 'Nguồn cần kiểm tra'}
-                  </span>
-                  <span>Phụ trách: {item.owner || 'Chưa giao'}</span>
-                  {item.dueDate && <span>Hạn: {item.dueDate}</span>}
-                </span>
-                <p className="case-step">
-                  Bước tiếp: {item.nextStep || 'Bổ sung căn cứ và quyết định'}
-                </p>
-              </span>
-              <span className={`accounting-pill is-${item.status}`}>
-                {item.stale
-                  ? 'Nguồn thay đổi · cần rà soát'
-                  : reviewStatusLabels[item.status]}
-              </span>
-            </Link>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-function TransformationHistory({
-  snapshot,
-  selectedId,
-}: {
-  snapshot: GLReviewSnapshot
-  selectedId?: string
-}) {
-  const grouped = new Map<
-    string,
-    { count: number; impact: number; fields: Set<string> }
-  >()
-  for (const item of snapshot.transformations) {
-    const group = grouped.get(item.rule) || {
-      count: 0,
-      impact: 0,
-      fields: new Set<string>(),
-    }
-    group.count++
-    group.impact += item.impactCents
-    group.fields.add(`${item.sourceField} → ${item.outputField}`)
-    grouped.set(item.rule, group)
-  }
-  const details = snapshot.transformations.filter(
-    (item) => item.recordId === selectedId,
-  )
-  return (
-    <details className="accounting-diagnostics">
-      <summary>Lịch sử tự chuẩn hóa · {grouped.size} quy tắc</summary>
-      <p className="mt-2 text-xs leading-6 text-muted-foreground">
-        Với đầu vào sổ cái: doanh thu = −số tiền GL gốc. Đầu vào doanh thu giữ
-        dấu và lưu riêng số tiền GL gốc tương ứng. Đây là thay đổi cách biểu
-        diễn, không phải sửa sổ cái. Tổng ảnh hưởng dưới đây là chênh lệch giữa
-        giá trị nguồn và giá trị biểu diễn theo từng quy tắc.
-      </p>
-      <div className="diagnostics-scroll">
-        <table className="accounting-table">
-          <thead>
-            <tr>
-              <th>Quy tắc</th>
-              <th>Số dòng</th>
-              <th>Field nguồn → đầu ra</th>
-              <th>Ảnh hưởng biểu diễn USD</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...grouped].map(([rule, group]) => (
-              <tr key={rule}>
-                <td>{rule}</td>
-                <td>{group.count.toLocaleString('vi-VN')}</td>
-                <td>{[...group.fields].join(', ')}</td>
-                <td>{money(group.impact)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 text-xs font-medium">
-        Chi tiết bút toán đang chọn · {details.length} thay đổi
-      </p>
-      <div className="diagnostics-scroll">
-        <table className="accounting-table">
-          <thead>
-            <tr>
-              <th>Quy tắc / field</th>
-              <th>Trước</th>
-              <th>Sau</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  {item.rule}
-                  <small>
-                    {item.sourceField} → {item.outputField}
-                  </small>
-                </td>
-                <td>{item.before ?? '(trống)'}</td>
-                <td>{item.after ?? '(trống)'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Chọn bút toán khác để xem dấu vết tương ứng. Những dòng cần kiểm tra nằm
-        trong chẩn đoán GL và hàng chờ.
-      </p>
-    </details>
-  )
-}
-
-function CaseInspector({
-  reviewCase,
-  records,
-  onDirtyChange,
-}: {
-  reviewCase: GLReviewCase
-  records: GLRecord[]
-  onDirtyChange: (dirty: boolean) => void
-}) {
-  const store = useAppStore()
-  const [draft, setDraft] = useState(reviewCase)
-  const [previousCase, setPreviousCase] = useState(reviewCase)
-  const [message, setMessage] = useState('')
-  const [savedDraft, setSavedDraft] = useState(JSON.stringify(reviewCase))
-  // Refresh shared changes without replacing inputs or discarding local edits.
-  if (previousCase !== reviewCase) {
-    const editable = [
-      'classification',
-      'status',
-      'purpose',
-      'notes',
-      'evidence',
-      'evidenceReviewed',
-      'decision',
-      'owner',
-      'dueDate',
-      'nextStep',
-    ] as const
-    setDraft({
-      ...reviewCase,
-      ...Object.fromEntries(
-        editable
-          .filter((field) => draft[field] !== previousCase[field])
-          .map((field) => [field, draft[field]]),
-      ),
-    })
-    setPreviousCase(reviewCase)
-    setSavedDraft(JSON.stringify(reviewCase))
-  }
-  useEffect(() => {
-    onDirtyChange(JSON.stringify(draft) !== savedDraft)
-  }, [draft, savedDraft, onDirtyChange])
-  const set = <K extends keyof GLReviewCase>(
-    field: K,
-    value: GLReviewCase[K],
-  ) =>
-    setDraft((old) => ({
-      ...old,
-      [field]: value,
-      ...(field === 'evidence' ? { evidenceReviewed: false } : {}),
-      ...(old.status === 'confirmed' &&
-      ['classification', 'purpose', 'evidence', 'decision'].includes(field)
-        ? { status: 'in_progress' as const }
-        : {}),
-    }))
-  const save = () => {
-    try {
-      store.updateReviewCase(reviewCase.id, {
-        classification: draft.classification,
-        status: draft.status,
-        purpose: draft.purpose,
-        notes: draft.notes,
-        evidence: draft.evidence,
-        evidenceReviewed: draft.evidenceReviewed,
-        decision: draft.decision,
-        owner: draft.owner,
-        dueDate: draft.dueDate,
-        nextStep: draft.nextStep,
-      })
-      setSavedDraft(JSON.stringify(draft))
-      setMessage('Đã lưu quyết định trong phiên. Nhật ký ngoại lệ đã cập nhật.')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error))
-    }
-  }
-  const channelTotals = records.reduce<Record<string, number>>(
-    (totals, record) => ({
-      ...totals,
-      [record.channel || 'UNALLOCATED']:
-        (totals[record.channel || 'UNALLOCATED'] || 0) +
-        (record.revenueCents || 0),
-    }),
-    {},
-  )
-  const total = records.reduce((sum, r) => sum + (r.revenueCents || 0), 0)
-  const transferProblem = transferIssue(records)
-  return (
-    <form
-      id={`review-case-${reviewCase.id}`}
-      onSubmit={(event) => {
-        event.preventDefault()
-        save()
-      }}
-    >
-      {reviewCase.stale && (
-        <p className="accounting-notice is-warning mt-2">
-          Nguồn hoặc cấu hình đã đổi. Rà soát lại bằng chứng và quyết định trước
-          khi xác nhận.
-        </p>
-      )}
-      <h3>Căn cứ gợi ý</h3>
-      <ul>
-        {reviewCase.suggestionReasons.map((reason) => (
-          <li key={reason}>{reason}</li>
-        ))}
-      </ul>
-      {draft.classification === 'channel_transfer' && (
-        <div className="accounting-notice mt-3">
-          <p className="font-medium">Kiểm tra hai vế chuyển kênh</p>
-          {Object.entries(channelTotals).map(([channel, amount]) => (
-            <p key={channel}>
-              {channel}: {money(amount)}
-            </p>
-          ))}
-          <p>
-            Tổng công ty: {money(total)} · {records.length} bút toán độc lập.
-          </p>
-          <p>
-            {transferProblem ||
-              'Đủ hai bút toán, hai kênh cùng kỳ và tổng bằng 0. Vẫn cần người dùng xác minh chứng từ.'}
-          </p>
-        </div>
-      )}
-      <div className="accounting-form">
-        <label>
-          Phân loại nghiệp vụ
-          <select
-            value={draft.classification}
-            onChange={(e) =>
-              set('classification', e.target.value as GLClassification)
-            }
-          >
-            {Object.entries(classificationLabels).map(([key, label]) => (
-              <option value={key} key={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Mục đích bút toán
-          <textarea
-            value={draft.purpose}
-            onChange={(e) => set('purpose', e.target.value)}
-            placeholder="Nội dung nghiệp vụ đã kiểm tra"
-          />
-        </label>
-        <label>
-          Bằng chứng / tài liệu được cung cấp
-          <textarea
-            value={draft.evidence}
-            onChange={(e) => set('evidence', e.target.value)}
-            placeholder="Tên chứng từ, đường dẫn hoặc nội dung bằng chứng trong phiên"
-          />
-        </label>
-        <p className="text-muted-foreground">
-          Có mã tham chiếu: {records.some((r) => r.sourceRef) ? 'Có' : 'Không'}{' '}
-          · Bằng chứng được cung cấp: {draft.evidence.trim() ? 'Có' : 'Chưa có'}
-        </p>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={draft.evidenceReviewed}
-            onChange={(e) => set('evidenceReviewed', e.target.checked)}
-          />
-          Tôi đã rà soát bằng chứng được cung cấp
-        </label>
-        <label>
-          Nội dung quyết định / nguyên nhân xác nhận
-          <textarea
-            value={draft.decision}
-            onChange={(e) => set('decision', e.target.value)}
-            placeholder="Quyết định thực tế, căn cứ và phạm vi xác nhận"
-          />
-        </label>
-        <label>
-          Ghi chú
-          <textarea
-            value={draft.notes}
-            onChange={(e) => set('notes', e.target.value)}
-          />
-        </label>
-        <div className="row">
-          <label>
-            Người / nhóm phụ trách
-            <input
-              value={draft.owner}
-              onChange={(e) => set('owner', e.target.value)}
-              placeholder="Finance"
-            />
-          </label>
-          <label>
-            Hạn xử lý
-            <input
-              type="date"
-              value={draft.dueDate}
-              onChange={(e) => set('dueDate', e.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Bước tiếp theo
-          <input
-            value={draft.nextStep}
-            onChange={(e) => set('nextStep', e.target.value)}
-          />
-        </label>
-        <label>
-          Trạng thái
-          <select
-            value={draft.status}
-            onChange={(e) => set('status', e.target.value as GLCaseStatus)}
-          >
-            {Object.entries(reviewStatusLabels).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="text-muted-foreground">
-          “Đã xem” vẫn là ngoại lệ mở. Xác nhận yêu cầu mục đích, bằng chứng đã
-          rà soát và nội dung quyết định.
-        </p>
-        {message && (
-          <p role="status" className="accounting-notice">
-            {message}
-          </p>
-        )}
-      </div>
-    </form>
-  )
-}
-
-function CorrectionForm({
-  record,
-  onDirtyChange,
-  onPreviewChange,
-}: {
-  record: GLRecord
-  onDirtyChange: (dirty: boolean) => void
-  onPreviewChange: (kind: 'apply' | 'undo' | null) => void
-}) {
-  const store = useAppStore()
-  const [amount, setAmount] = useState(
-    record.amountCents == null ? '' : (record.amountCents / 100).toFixed(2),
-  )
-  const [date, setDate] = useState(record.postingDate || '')
-  const [period, setPeriod] = useState(record.period || '')
-  const [channel, setChannel] = useState(record.channel || 'UNALLOCATED')
-  const [storeKey, setStoreKey] = useState(record.storeKey || '-1')
-  const [reason, setReason] = useState('')
-  const [error, setError] = useState('')
-  const [preview, setPreview] = useState<ReturnType<
-    typeof store.previewGLCorrection
-  > | null>(null)
-  const [previewKind, setPreviewKind] = useState<'apply' | 'undo'>('apply')
-  useEffect(() => {
-    onPreviewChange(preview ? previewKind : null)
-  }, [preview, previewKind, onPreviewChange])
-  useEffect(() => {
-    onDirtyChange(
-      amount !==
-        (record.amountCents == null
-          ? ''
-          : (record.amountCents / 100).toFixed(2)) ||
-        date !== (record.postingDate || '') ||
-        period !== (record.period || '') ||
-        channel !== (record.channel || 'UNALLOCATED') ||
-        storeKey !== (record.storeKey || '-1') ||
-        !!reason.trim(),
-    )
-  }, [amount, date, period, channel, storeKey, reason, record, onDirtyChange])
-  const active = store.glCorrections.some(
-    (item) => item.recordId === record.id && item.active,
-  )
-  const prepare = () => {
-    try {
-      const patch: GLPatch = {}
-      if (
-        amount !==
-        (record.amountCents == null
-          ? ''
-          : (record.amountCents / 100).toFixed(2))
-      ) {
-        if (!/^[+-]?\d+(\.\d{1,2})?$/.test(amount.trim()))
-          throw new Error(
-            'Nhập số tiền GL gốc (USD) bằng số, tối đa 2 chữ số thập phân.',
-          )
-        const cents = Math.round(Number(amount) * 100)
-        if (!Number.isSafeInteger(cents))
-          throw new Error('Số tiền vượt phạm vi hỗ trợ.')
-        patch.amountCents = cents
-      }
-      if (date !== (record.postingDate || '')) patch.postingDate = date
-      if (period !== (record.period || '')) patch.period = period
-      if (storeKey !== (record.storeKey || '-1')) patch.storeKey = storeKey
-      if (channel !== (record.channel || 'UNALLOCATED')) patch.channel = channel
-      if (!Object.keys(patch).length)
-        throw new Error('Chưa có thay đổi để xem trước.')
-      setPreview(store.previewGLCorrection(record.id, patch, reason))
-      setPreviewKind('apply')
-      setError('')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      setPreview(null)
-    }
-  }
-  const applyPreview = () => {
-    if (!preview || store.isProcessing) return
-    try {
-      if (previewKind === 'undo')
-        store.undoGLCorrection(record.id, preview.reason)
-      else store.applyGLCorrection(record.id, preview.patch, preview.reason)
-      setPreview(null)
-      setError('')
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : String(issue))
-    }
-  }
-  return (
-    <div className="correction-section">
-      <h3>Đề xuất điều chỉnh dữ liệu hiệu lực</h3>
-      <p className="mt-2 text-muted-foreground">
-        Chỉ áp dụng cho phiên đối soát trong tab này. Dữ liệu gốc được giữ
-        nguyên. Thao tác này không sửa sổ cái ERP.
-      </p>
-      <form
-        id="gl-correction-form"
-        className="accounting-form"
-        onChange={() => setPreview(null)}
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (
-            (event.nativeEvent as SubmitEvent).submitter?.getAttribute(
-              'value',
-            ) === 'commit'
-          )
-            applyPreview()
-          else prepare()
-        }}
-      >
-        <label>
-          Số tiền GL gốc (USD) · dấu sổ cái
-          <input
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </label>
-        <div className="row">
-          <label>
-            Ngày ghi sổ
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
-          <label>
-            Kỳ
-            <input
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-            />
-          </label>
-        </div>
-        <div className="row">
-          <label>
-            Kênh
-            <input
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              list="gl-review-channels"
-            />
-            <datalist id="gl-review-channels">
-              <option value="STORE" />
-              <option value="WEB" />
-              <option value="UNALLOCATED" />
-            </datalist>
-          </label>
-          <label>
-            Khóa cửa hàng
-            <input
-              value={storeKey}
-              onChange={(e) => setStoreKey(e.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Lý do và căn cứ (bắt buộc)
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </label>
-        {error && (
-          <p role="alert" className="text-destructive">
-            {error}
-          </p>
-        )}
-        {preview && (
-          <div className="accounting-preview">
-            <strong>
-              {previewKind === 'undo' ? 'Hoàn tác về nguồn gốc' : 'Trước → Sau'}
-            </strong>
-            <table>
-              <tbody>
-                <tr>
-                  <td>Số tiền GL gốc</td>
-                  <td>
-                    {money(preview.before.amountCents)} →{' '}
-                    {money(preview.after.amountCents)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Doanh thu</td>
-                  <td>
-                    {money(preview.before.revenueCents)} →{' '}
-                    {money(preview.after.revenueCents)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Ngày / kỳ</td>
-                  <td>
-                    {preview.before.postingDate} / {preview.before.period} →{' '}
-                    {preview.after.postingDate} / {preview.after.period}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Phân bổ</td>
-                  <td>
-                    {preview.before.channel} / {preview.before.storeKey} →{' '}
-                    {preview.after.channel} / {preview.after.storeKey}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p>Δ Tổng GL: {money(preview.totalGLDeltaCents)}</p>
-            <p>Δ Chưa giải thích: {money(preview.unexplainedDeltaCents)}</p>
-            {!preview.complete && (
-              <p className="font-medium text-warning">
-                Ảnh hưởng tạm tính: nguồn chưa đủ để đối soát toàn bộ. Khôi phục
-                dữ liệu gốc không hợp lệ sẽ chặn lại các đầu ra phụ thuộc.
-              </p>
-            )}
-            <p>
-              Chênh lệch nguồn − GL thay đổi ngược dấu doanh thu; các nhóm cửa
-              hàng × ngày liên quan sẽ được tính lại.
-            </p>
-            <h3>Ảnh hưởng theo kỳ / kênh</h3>
-            {preview.impacts.map((impact, index) => (
-              <p key={index}>
-                {impact.period} · {impact.channel}: {money(impact.beforeCents)}{' '}
-                → {money(impact.afterCents)}
-              </p>
-            ))}
-          </div>
-        )}
-        {active && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={store.isProcessing}
-            type="button"
-            onClick={() => {
-              try {
-                setPreview(store.previewGLUndo(record.id, reason))
-                setPreviewKind('undo')
-                setError('')
-              } catch (e) {
-                setError(e instanceof Error ? e.message : String(e))
-              }
-            }}
-          >
-            <Undo2 className="size-3.5" />
-            Xem trước hoàn tác
-          </Button>
-        )}
-      </form>
-    </div>
-  )
-}
-
-type InspectorTab = 'overview' | 'evidence' | 'correction' | 'history'
-const inspectorTabs: { id: InspectorTab; label: string }[] = [
-  { id: 'overview', label: 'Tổng quan' },
-  { id: 'evidence', label: 'Bằng chứng & xử lý' },
-  { id: 'correction', label: 'Điều chỉnh' },
-  { id: 'history', label: 'Lịch sử & nguồn' },
-]
-
-function RecordInspector({
-  record,
-  reviewCase,
-  records,
-  snapshot,
-  onDirtyChange,
-  onClose,
-  drawer,
-  tab,
-  onTabChange,
-}: {
-  record?: GLRecord
-  reviewCase?: GLReviewCase
-  records: GLRecord[]
-  snapshot: GLReviewSnapshot
-  onDirtyChange: (dirty: boolean) => void
-  onClose: () => void
-  drawer: boolean
-  tab: InspectorTab
-  onTabChange: (tab: InspectorTab) => void
-}) {
-  const store = useAppStore()
-  const [caseDirty, setCaseDirty] = useState(false)
-  const [correctionDirty, setCorrectionDirty] = useState(false)
-  const [previewAction, setPreviewAction] = useState<'apply' | 'undo' | null>(
-    null,
-  )
-  const [message, setMessage] = useState('')
-  const scrollRef = useRef<HTMLDivElement>(null)
-  useEffect(
-    () => onDirtyChange(caseDirty || correctionDirty),
-    [caseDirty, correctionDirty, onDirtyChange],
-  )
-  const activateTab = (value: InspectorTab) => {
-    onTabChange(value)
-    if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }
-  const related = reviewCase
-    ? records.filter((r) => reviewCase.recordIds.includes(r.id))
-    : record
-      ? [record]
-      : []
-  const title =
-    record?.journalId ||
-    (reviewCase ? 'Hồ sơ cần rà soát lại' : 'Chi tiết bút toán')
-  return (
-    <>
-      <header className="inspector-header">
-        <div className="inspector-heading-line">
-          <span className="inspector-eyebrow">
-            {reviewCase ? 'Hồ sơ rà soát' : 'Bút toán hệ thống'}
-          </span>
-          {drawer && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Đóng chi tiết"
-              onClick={onClose}
-            >
-              <X className="size-4" />
-            </Button>
-          )}
-        </div>
-        <h2 id="review-inspector-title" title={title}>
-          {title}
-        </h2>
-        <div className="inspector-summary">
-          <span>
-            {record?.journalType ||
-              (reviewCase && classificationLabels[reviewCase.classification])}
-          </span>
-          <strong className="financial-value">
-            {record ? money(record.revenueCents) : `${related.length} bút toán`}
-          </strong>
-          {record && <small>Doanh thu (USD)</small>}
-        </div>
-        <span
-          className={`accounting-pill is-${reviewCase?.status || 'confirmed'}`}
-        >
-          {reviewCase?.stale
-            ? 'Nguồn thay đổi · cần rà soát'
-            : reviewCase
-              ? reviewStatusLabels[reviewCase.status]
-              : 'Hợp lệ'}
-        </span>
-      </header>
-      <div
-        className="inspector-tabs"
-        role="tablist"
-        aria-label="Nội dung chi tiết"
-      >
-        {inspectorTabs.map(({ id, label }) => (
-          <button
-            key={id}
-            id={`inspector-tab-${id}`}
-            role="tab"
-            aria-selected={tab === id}
-            aria-controls={`inspector-panel-${id}`}
-            tabIndex={tab === id ? 0 : -1}
-            onClick={() => activateTab(id)}
-            onKeyDown={(event) => {
-              const index = inspectorTabs.findIndex((item) => item.id === id)
-              const next =
-                event.key === 'ArrowRight'
-                  ? (index + 1) % 4
-                  : event.key === 'ArrowLeft'
-                    ? (index + 3) % 4
-                    : event.key === 'Home'
-                      ? 0
-                      : event.key === 'End'
-                        ? 3
-                        : -1
-              if (next >= 0) {
-                event.preventDefault()
-                activateTab(inspectorTabs[next].id)
-                document
-                  .getElementById(`inspector-tab-${inspectorTabs[next].id}`)
-                  ?.focus()
-              }
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="inspector-body" ref={scrollRef}>
-        <section
-          id="inspector-panel-overview"
-          role="tabpanel"
-          aria-labelledby="inspector-tab-overview"
-          hidden={tab !== 'overview'}
-        >
-          {reviewCase?.stale && (
-            <p className="accounting-notice is-warning">
-              Nguồn hoặc cấu hình đã đổi. Rà soát lại bằng chứng và quyết định
-              trước khi xác nhận.
-            </p>
-          )}
-          <h3>Thông tin bút toán</h3>
-          {record ? (
-            <dl className="inspector-facts">
-              <div>
-                <dt>Ngày / kỳ</dt>
-                <dd>
-                  {record.postingDate || 'Ngày chưa hợp lệ'} ·{' '}
-                  {record.period || 'Chưa rõ kỳ'}
-                </dd>
-              </div>
-              <div>
-                <dt>Kênh / cửa hàng</dt>
-                <dd>
-                  {displayChannel(record)} ·{' '}
-                  {record.storeCode || record.storeKey || 'Chưa có'}
-                  {record.storeKey === '-1' && (
-                    <small>Nhóm kỹ thuật, không phải cửa hàng thực tế.</small>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>Doanh thu (USD)</dt>
-                <dd className="financial-value">
-                  {money(record.revenueCents)}
-                </dd>
-              </div>
-              <div>
-                <dt>Số tiền GL gốc (USD)</dt>
-                <dd className="financial-value">
-                  {money(record.amountCents)}
-                  <small>Theo dấu sổ cái</small>
-                </dd>
-              </div>
-              <div>
-                <dt>Tham chiếu</dt>
-                <dd>{record.sourceRef || 'Chưa cung cấp'}</dd>
-              </div>
-              <div>
-                <dt>Diễn giải</dt>
-                <dd>{record.description || 'Chưa có diễn giải'}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="accounting-notice is-warning">
-              Bút toán liên quan không còn trong phiên dữ liệu hiện tại. Lịch sử
-              hồ sơ được giữ để truy vết.
-            </p>
-          )}
-          {reviewCase ? (
-            <>
-              <h3>
-                {classificationLabels[reviewCase.classification]} ·{' '}
-                {related.length} bút toán liên quan
-              </h3>
-              <ul>
-                {reviewCase.suggestionReasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-              <dl className="inspector-facts">
-                <div>
-                  <dt>Người phụ trách</dt>
-                  <dd>{reviewCase.owner || 'Chưa giao'}</dd>
-                </div>
-                <div>
-                  <dt>Bước tiếp theo</dt>
-                  <dd>
-                    {reviewCase.nextStep || 'Bổ sung bằng chứng và quyết định'}
-                  </dd>
-                </div>
-              </dl>
-              {related.length > 1 && (
-                <ul className="related-journals">
-                  {related.map((r) => (
-                    <li key={r.id}>
-                      <span>{r.journalId}</span>
-                      <strong className="financial-value">
-                        {money(r.revenueCents)}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-3 text-muted-foreground">
-                {reviewCase.evidenceReviewed && reviewCase.evidence.trim()
-                  ? 'Đã rà soát bằng chứng'
-                  : 'Chưa xác minh chứng từ'}
-                . Hồ sơ có thể liên quan nhiều bút toán.
-              </p>
-            </>
-          ) : (
-            <p className="accounting-notice mt-3">
-              Bút toán hệ thống hợp lệ. Không có yêu cầu rà soát nghiệp vụ
-              riêng.
-            </p>
-          )}
-        </section>
-        <section
-          id="inspector-panel-evidence"
-          role="tabpanel"
-          aria-labelledby="inspector-tab-evidence"
-          hidden={tab !== 'evidence'}
-        >
-          {reviewCase ? (
-            <CaseInspector
-              key={reviewCase.id}
-              reviewCase={reviewCase}
-              records={related}
-              onDirtyChange={setCaseDirty}
-            />
-          ) : (
-            <p>Bút toán này không có hồ sơ rà soát riêng.</p>
-          )}
-        </section>
-        <section
-          id="inspector-panel-correction"
-          role="tabpanel"
-          aria-labelledby="inspector-tab-correction"
-          hidden={tab !== 'correction'}
-        >
-          {record ? (
-            <CorrectionForm
-              key={`${record.id}:${record.sourceFingerprint}:${record.amountCents}:${record.postingDate}:${record.storeKey}:${record.channel}`}
-              record={record}
-              onDirtyChange={setCorrectionDirty}
-              onPreviewChange={setPreviewAction}
-            />
-          ) : (
-            <p>Chọn bút toán trong nguồn hiện tại để đề xuất điều chỉnh.</p>
-          )}
-        </section>
-        <section
-          id="inspector-panel-history"
-          role="tabpanel"
-          aria-labelledby="inspector-tab-history"
-          hidden={tab !== 'history'}
-        >
-          {reviewCase && (
-            <>
-              <h3>Lịch sử hồ sơ ({reviewCase.history.length})</h3>
-              <ul className="accounting-history">
-                {reviewCase.history.map((entry, index) => (
-                  <li key={`${entry.at}:${index}`}>
-                    <time>{entry.at}</time>
-                    <strong>{entry.action}</strong>
-                    <p>{entry.detail}</p>
-                  </li>
-                ))}
-              </ul>
-              <p className="technical-value mt-3 text-muted-foreground">
-                Mã hồ sơ: {reviewCase.id}
-              </p>
-            </>
-          )}
-          {record && (
-            <>
-              <h3>Dữ liệu gốc & truy vết</h3>
-              <p>
-                {record.fileName} · {record.sheetName} ·{' '}
-                {record.sourceRow === null
-                  ? `Chưa xác định dòng vật lý · bản ghi ${record.sourceRecord ?? '?'}`
-                  : `dòng ${record.sourceRow}`}
-              </p>
-              <p className="mt-2">
-                Giá trị đầu vào: {record.raw.amount ?? '(trống)'} · Cơ sở:{' '}
-                {record.amountBasis === 'ledger'
-                  ? 'dấu sổ cái'
-                  : 'doanh thu đã chuẩn hóa'}
-                . Mỗi bút toán chỉ được tính một lần.
-              </p>
-              <pre>
-                {JSON.stringify(record.sourceValues ?? record.raw, null, 2)}
-              </pre>
-              <p className="technical-value mt-2 text-muted-foreground">
-                Dấu vân tay nguồn: {record.sourceFingerprint}
-                <br />
-                Cấu hình: {record.configurationVersion}
-                <br />
-                Phiên dữ liệu: {snapshot.runId}
-              </p>
-              <TransformationHistory
-                snapshot={snapshot}
-                selectedId={record.id}
-              />
-            </>
-          )}
-        </section>
-      </div>
-      <footer className="inspector-footer">
-        {(caseDirty || correctionDirty) && (
-          <p className="draft-indicator" role="status">
-            Có thay đổi chưa lưu
-            {caseDirty && correctionDirty ? ' ở phần xử lý và điều chỉnh' : ''}
-          </p>
-        )}
-        {tab === 'evidence' && reviewCase ? (
-          <>
-            <Button
-              type="submit"
-              form={`review-case-${reviewCase.id}`}
-              size="sm"
-              disabled={store.isProcessing}
-            >
-              <ShieldCheck className="size-3.5" />
-              Lưu rà soát
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={store.isProcessing}
-              onClick={() => {
-                const created = store.requestReviewEvidence([reviewCase.id])
-                setMessage(
-                  created
-                    ? 'Đã tạo yêu cầu chứng từ trong phiên, không gửi email.'
-                    : 'Hồ sơ đã có yêu cầu chứng từ đang chờ xử lý trong phiên.',
-                )
-              }}
-            >
-              Yêu cầu chứng từ
-            </Button>
-          </>
-        ) : tab === 'correction' && record ? (
-          <>
-            {previewAction && (
-              <Button
-                type="submit"
-                form="gl-correction-form"
-                name="correction-action"
-                value="commit"
-                size="sm"
-                disabled={store.isProcessing}
-              >
-                {previewAction === 'undo'
-                  ? 'Hoàn tác & tính lại'
-                  : 'Áp dụng & tính lại'}
-              </Button>
-            )}
-            <Button
-              type="submit"
-              form="gl-correction-form"
-              variant={previewAction ? 'outline' : 'default'}
-              size="sm"
-              disabled={store.isProcessing}
-            >
-              Xem trước ảnh hưởng
-            </Button>
-          </>
-        ) : reviewCase ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => activateTab('evidence')}
-          >
-            Mở bằng chứng & xử lý
-          </Button>
-        ) : (
-          <span className="text-muted-foreground">
-            Dữ liệu chỉ lưu trong tab hiện tại.
-          </span>
-        )}
-        {message && <p role="status">{message}</p>}
-      </footer>
-    </>
-  )
-}
+// These panels live in components/accounting-review; they stay re-exported here
+// so existing imports from this page module keep working.
+export { GLDiagnosticsView } from '@/components/accounting-review/GLDiagnosticsView'
+export { AccountingExceptionCases } from '@/components/accounting-review/AccountingExceptionCases'
 
 export function AccountingReview() {
   const store = useAppStore()
@@ -1463,13 +289,27 @@ function RawAccountingReview() {
       : '/exceptions?tab=accounting'
   return (
     <section
+      data-tour="accounting-workspace"
+      data-manual-count={
+        records.filter((record) => record.journalType === 'MANUAL').length
+      }
+      data-visible-count={filtered.length}
       className="accounting-workspace viewport-workspace"
       aria-label="Rà soát kế toán"
     >
       <header className="workspace-page-heading accounting-page-heading">
         <div>
           <h1>Rà soát kế toán</h1>
-          <p>Kiểm tra bút toán, bằng chứng và quyết định</p>
+          <InformationNote title="Rà soát kế toán">
+            <p>
+              Kiểm tra bút toán, bằng chứng và quyết định. Bộ lọc chỉ áp dụng
+              danh sách; tổng GL giữ nguyên kỳ báo cáo. Không lọc ngưỡng tiền
+              trong hàng chờ rà soát.
+            </p>
+            <p>
+              Kỳ báo cáo: {store.period.start} → {store.period.end}.
+            </p>
+          </InformationNote>
         </div>
         <div className="heading-actions">
           {snapshot && (
@@ -1537,9 +377,6 @@ function RawAccountingReview() {
               <small>Hồ sơ còn mở</small>
               <strong>{pending.length.toLocaleString('vi-VN')}</strong>
             </div>
-            <span className="summary-period">
-              {store.period.start} → {store.period.end}
-            </span>
           </div>
           <ReconciliationRunStatus />
           {store.status !== 'error' &&
@@ -1576,6 +413,7 @@ function RawAccountingReview() {
                 <Search className="inline size-3.5" /> Tìm bút toán / tham chiếu
               </span>
               <input
+                data-tour="accounting-search"
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -1584,7 +422,11 @@ function RawAccountingReview() {
             </label>
             <label>
               Góc nhìn
-              <select value={scope} onChange={(e) => setScope(e.target.value)}>
+              <select
+                data-tour="accounting-scope"
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+              >
                 <option value="review">Hàng chờ rà soát</option>
                 <option value="all">Toàn bộ GL</option>
               </select>
@@ -1605,6 +447,7 @@ function RawAccountingReview() {
               </select>
             </label>
             <Button
+              data-tour="accounting-more-filters"
               variant="outline"
               size="sm"
               aria-expanded={moreFilters}
@@ -1626,7 +469,11 @@ function RawAccountingReview() {
             >
               <label>
                 Loại bút toán
-                <select value={type} onChange={(e) => setType(e.target.value)}>
+                <select
+                  data-tour="accounting-journal-type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
                   <option value="all">Tất cả loại</option>
                   {[
                     ...new Set(
@@ -1660,6 +507,7 @@ function RawAccountingReview() {
               <label>
                 Phân loại
                 <select
+                  data-tour="accounting-classification"
                   value={classification}
                   onChange={(e) => setClassification(e.target.value)}
                 >
@@ -1671,9 +519,6 @@ function RawAccountingReview() {
                   ))}
                 </select>
               </label>
-              <span>
-                Bộ lọc chỉ áp dụng danh sách; tổng GL giữ nguyên kỳ báo cáo.
-              </span>
             </div>
           </div>
           <div
@@ -1692,10 +537,6 @@ function RawAccountingReview() {
                   <strong>{filtered.length.toLocaleString('vi-VN')}</strong> /{' '}
                   {records.length.toLocaleString('vi-VN')} bút toán ·{' '}
                   {scope === 'review' ? 'Hàng chờ rà soát' : 'Toàn bộ GL'}
-                  <small>
-                    Không lọc ngưỡng tiền · Kỳ nguồn:{' '}
-                    {period === 'all' ? 'tất cả' : period}
-                  </small>
                 </span>
                 <span>
                   {filtered.length > 0
@@ -1753,7 +594,7 @@ function RawAccountingReview() {
                       <th>Bút toán / loại</th>
                       <th>Ngày / kỳ</th>
                       <th>Kênh / cửa hàng</th>
-                      <th className="money">Giá trị (USD)</th>
+                      <th className="money">Doanh thu (USD)</th>
                       <th>Tham chiếu</th>
                       <th>Trạng thái</th>
                     </tr>
@@ -1764,6 +605,7 @@ function RawAccountingReview() {
                       return (
                         <tr
                           key={r.id}
+                          data-tour={`accounting-row-${r.journalId}`}
                           aria-selected={r.id === selected?.id}
                           className={r.id === selected?.id ? 'is-selected' : ''}
                           onClick={(e) => {
@@ -1795,6 +637,7 @@ function RawAccountingReview() {
                           </td>
                           <td>
                             <button
+                              data-tour={`accounting-journal-${r.journalId}`}
                               className="journal-button"
                               title={r.journalId || r.id}
                               onClick={(e) => selectRecord(r, e.currentTarget)}
@@ -1822,15 +665,11 @@ function RawAccountingReview() {
                                 : r.storeCode || r.storeKey || 'Trống'}
                             </small>
                           </td>
-                          <td className="money">
-                            <span className="amount-label">Doanh thu</span>
+                          <td
+                            className="money"
+                            title={`GL gốc theo dấu sổ cái: ${money(r.amountCents)}`}
+                          >
                             <strong>{money(r.revenueCents)}</strong>
-                            <small className="amount-label">
-                              GL gốc · dấu sổ cái
-                            </small>
-                            <span className="ledger-amount">
-                              {money(r.amountCents)}
-                            </span>
                           </td>
                           <td>
                             <span

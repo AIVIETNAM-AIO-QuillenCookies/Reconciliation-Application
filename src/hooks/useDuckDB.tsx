@@ -21,7 +21,13 @@ const loadingState: EngineState = {
   error: null,
 }
 
-export function DuckDBProvider({ children }: { children: ReactNode }) {
+export function DuckDBProvider({
+  children,
+  isolated = false,
+}: {
+  children: ReactNode
+  isolated?: boolean
+}) {
   const [state, setState] = useState<EngineState>(loadingState)
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => {
@@ -31,10 +37,20 @@ export function DuckDBProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
+    let ownedDatabase: AsyncDuckDB | null = null
     // Keep the engine bundle out of the initial UI chunk.
     void import('@/lib/duckdb')
-      .then(({ getDuckDB }) => getDuckDB())
+      .then(({ getDuckDB, createIsolatedDuckDB }) =>
+        isolated ? createIsolatedDuckDB() : getDuckDB(),
+      )
       .then((database) => {
+        if (isolated) {
+          if (cancelled) {
+            void database.terminate()
+            return
+          }
+          ownedDatabase = database
+        }
         if (!cancelled) setState({ status: 'ready', database, error: null })
       })
       .catch((error: unknown) => {
@@ -49,8 +65,9 @@ export function DuckDBProvider({ children }: { children: ReactNode }) {
     // Consumers do not own the shared worker. Navigation must not terminate it.
     return () => {
       cancelled = true
+      if (ownedDatabase) void ownedDatabase.terminate().catch(() => undefined)
     }
-  }, [attempt])
+  }, [attempt, isolated])
 
   return (
     <DuckDBContext.Provider value={{ ...state, retry }}>

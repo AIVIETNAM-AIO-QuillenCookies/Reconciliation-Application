@@ -1,11 +1,22 @@
 import { vi } from '@/lib/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MonitorPlay, Minimize2, Printer, LoaderCircle } from 'lucide-react'
+import {
+  MonitorPlay,
+  Minimize2,
+  Maximize2,
+  X,
+  Printer,
+  LoaderCircle,
+} from 'lucide-react'
+import { ExpandBackdrop } from '@/components/ExpandBackdrop'
+import { useExpandedView } from '@/hooks/useExpandedView'
 import { useAppStore } from '@/lib/store'
+import { InformationNote } from '@/components/PageInformation'
 import { ReferenceMethodology } from '@/components/excel-reference/ReferenceViews'
 import { WorkspaceToolbar } from '@/components/methodology/WorkspaceToolbar'
 import { SourcesAndJoins } from '@/components/methodology/SourcesAndJoins'
 import { PrintDocument } from '@/components/methodology/PrintDocument'
+import { ConventionDocumentView } from '@/components/conventions/ConventionDocument'
 import { PipelineCanvas } from '@/components/methodology/PipelineCanvas'
 import { RuleBrowser } from '@/components/methodology/RuleBrowser'
 import { EvidenceTable } from '@/components/methodology/EvidenceTable'
@@ -58,12 +69,24 @@ function RawMethodology() {
     confirmedMappings,
   } = useAppStore()
   const evidence = reconciliationData?.evidence
-  const [tab, setTab] = useState<WorkspaceTab>('pipeline')
+  const [tab, setTab] = useState<WorkspaceTab>('document')
   const [selections, setSelections] = useState<
     Record<WorkspaceTab, WorkspaceSelection | null>
-  >({ pipeline: null, sources: null, rules: null, evidence: null })
+  >({
+    document: null,
+    pipeline: null,
+    sources: null,
+    rules: null,
+    evidence: null,
+  })
   const [presentation, setPresentation] = useState(false)
   const presentationToggle = useRef<HTMLButtonElement>(null)
+  const {
+    expanded: isExpanded,
+    setExpanded,
+    close: closeExpanded,
+    toggle: expandToggle,
+  } = useExpandedView()
   const [scope, setScope] = useState<PipelineScope>('flow')
   const [source, setSource] = useState('All')
   const [ruleFilters, setRuleFilters] = useState(EMPTY_RULE_FILTERS)
@@ -197,6 +220,13 @@ function RawMethodology() {
             : null,
       }))
   }
+  const statusText = isProcessing
+    ? `${vi('Current engine stage')}: ${vi(processingPhase ?? status)}`
+    : evidence
+      ? `${vi('Successful run')} · ${evidence.runId.slice(0, 8)}`
+      : status === 'error'
+        ? vi('Processing failed; no successful evidence')
+        : vi('Definitions · no processed snapshot')
   const inspector = (
     <SelectionInspector
       selection={selection}
@@ -219,200 +249,253 @@ function RawMethodology() {
     />
   )
   return (
-    <div
-      ref={root}
-      className={`mw-workspace ${presentation ? 'mw-presentation' : ''}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && presentation) {
-          setPresentation(false)
-          presentationToggle.current?.focus()
-        }
-        if (
-          e.key === '/' &&
-          tab === 'rules' &&
-          !(e.target instanceof HTMLInputElement) &&
-          !(e.target instanceof HTMLSelectElement)
-        ) {
-          e.preventDefault()
-          root.current
-            ?.querySelector<HTMLInputElement>(
-              `[aria-label="${vi('Search rules')}"]`,
-            )
-            ?.focus()
-        }
-      }}
-    >
-      <WorkspaceToolbar
-        tab={tab}
-        onTabChange={changeTab}
-        evidenceCount={evidence?.tables.length ?? null}
-        processing={isProcessing}
-        hasSelection={!!selection}
-        onInspect={() => setDrawerOpen(true)}
-      />
-      <div className="mw-run-context">
-        <span className="mw-run-period">
-          <strong>{vi('Reporting period')}</strong> {period.start} →{' '}
-          {period.end}
-        </span>
-        <span role="status" className="mw-run-status">
-          {isProcessing && (
-            <LoaderCircle size={13} className="motion-safe:animate-spin" />
-          )}
-          {isProcessing
-            ? `${vi('Current engine stage')}: ${vi(processingPhase ?? status)}`
-            : evidence
-              ? `${vi('Successful run')} · ${evidence.runId.slice(0, 8)}`
-              : status === 'error'
-                ? vi('Processing failed; no successful evidence')
-                : vi('Definitions · no processed snapshot')}
-        </span>
-        <div className="mw-presentation-controls">
-          <button
-            ref={presentationToggle}
-            type="button"
-            className="mw-small-button"
-            aria-label="Toggle presentation mode"
-            aria-pressed={presentation}
-            onClick={() => setPresentation(!presentation)}
-          >
-            {presentation ? <Minimize2 size={14} /> : <MonitorPlay size={14} />}
-            <span>
-              {vi(presentation ? 'Exit presentation' : 'Presentation mode')}
-            </span>
-          </button>
+    <>
+      <ExpandBackdrop open={isExpanded} onClose={closeExpanded} />
+      <div
+        ref={root}
+        className={`mw-workspace ${presentation ? 'mw-presentation' : ''} ${isExpanded ? 'is-expanded-view' : ''}`}
+        data-tab={tab}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && presentation) {
+            setPresentation(false)
+            presentationToggle.current?.focus()
+          }
+          if (
+            e.key === '/' &&
+            tab === 'rules' &&
+            !(e.target instanceof HTMLInputElement) &&
+            !(e.target instanceof HTMLSelectElement)
+          ) {
+            e.preventDefault()
+            root.current
+              ?.querySelector<HTMLInputElement>(
+                `[aria-label="${vi('Search rules')}"]`,
+              )
+              ?.focus()
+          }
+        }}
+      >
+        {isExpanded && (
           <button
             type="button"
-            className="mw-small-button"
-            aria-label="Print or save methodology as PDF"
-            onClick={() => window.print()}
+            className="mw-expand-close"
+            aria-label="Thu nhỏ vùng làm việc"
+            title="Thu nhỏ (Esc)"
+            onClick={closeExpanded}
           >
-            <Printer size={14} />
-            <span>{vi('Print / Save PDF')}</span>
+            <X size={18} aria-hidden="true" />
           </button>
-        </div>
-      </div>
-      {status === 'error' && (
-        <p role="alert" className="mw-run-error">
-          {error}
-        </p>
-      )}
-      <div className="mw-workspace-body">
-        <div className="mw-main-panel">
-          <div
-            id="model-panel-pipeline"
-            className="mw-tab-panel"
-            role="tabpanel"
-            aria-labelledby="model-tab-pipeline"
-            hidden={tab !== 'pipeline'}
-          >
-            <PipelineCanvas
-              selection={tab === 'pipeline' ? selection : selections.pipeline}
-              onSelect={choose}
-              scope={scope}
-              onScopeChange={setScope}
-              source={source}
-              onSourceChange={(next) => {
-                setSource(next)
-                if (next === 'Dim' && scope === 'flow') setScope('references')
-              }}
-              focusRequest={focusRequest}
-              processingStage={
-                !isProcessing
-                  ? null
-                  : processingPhase === 'registering'
-                    ? 'source'
-                    : processingPhase === 'recognition'
-                      ? 'recognition'
-                      : processingPhase === 'reconciling'
-                        ? 'reconciliation'
-                        : processingPhase === 'evidence'
-                          ? 'output'
-                          : 'cleaning'
+        )}
+        <WorkspaceToolbar
+          tab={tab}
+          onTabChange={changeTab}
+          evidenceCount={evidence?.tables.length ?? null}
+          processing={isProcessing}
+          hasSelection={!!selection}
+          onInspect={() => setDrawerOpen(true)}
+        />
+        <div className="mw-run-context">
+          <InformationNote title="Phạm vi mô hình dữ liệu">
+            <p>
+              <strong>{vi('Reporting period')}</strong> {period.start} →{' '}
+              {period.end}
+            </p>
+          </InformationNote>
+          <span role="status" className="mw-run-status">
+            {isProcessing && (
+              <LoaderCircle size={13} className="motion-safe:animate-spin" />
+            )}
+            {statusText}
+          </span>
+          <div className="mw-presentation-controls">
+            <button
+              ref={expandToggle}
+              type="button"
+              className="mw-small-button mw-expand-toggle"
+              aria-label={
+                isExpanded ? 'Thu nhỏ vùng làm việc' : 'Phóng to vùng làm việc'
               }
-            />
-          </div>
-          <div
-            id="model-panel-sources"
-            className="mw-tab-panel"
-            role="tabpanel"
-            aria-labelledby="model-tab-sources"
-            hidden={tab !== 'sources'}
-          >
-            <SourcesAndJoins evidence={evidence} onSelect={choose} />
-          </div>
-          <div
-            id="model-panel-evidence"
-            className="mw-tab-panel"
-            role="tabpanel"
-            aria-labelledby="model-tab-evidence"
-            hidden={tab !== 'evidence'}
-          >
-            <EvidenceTable
-              evidence={evidence}
-              table={table}
-              selection={tab === 'evidence' ? selection : null}
-              onSelect={choose}
-              filters={evidenceFilters}
-              onFiltersChange={changeEvidenceFilters}
-              processing={isProcessing}
-              onTableChange={(id) => {
-                setTableId(id)
-                setEvidenceFilters((previous) => ({
-                  ...EMPTY_EVIDENCE_FILTERS,
-                  schema: previous.schema,
-                }))
-                setSelections((previous) => ({
-                  ...previous,
-                  evidence: evidence
-                    ? { kind: 'table', id, runId: evidence.runId }
-                    : null,
-                }))
+              aria-pressed={isExpanded}
+              onClick={() => {
+                setPresentation(false)
+                setExpanded(!isExpanded)
               }}
-            />
-          </div>
-          <div
-            id="model-panel-rules"
-            className="mw-tab-panel"
-            role="tabpanel"
-            aria-labelledby="model-tab-rules"
-            hidden={tab !== 'rules'}
-          >
-            <RuleBrowser
-              filters={ruleFilters}
-              onFiltersChange={changeRuleFilters}
-              selectedId={
-                tab === 'rules' && selection?.kind === 'rule'
-                  ? selection.id
-                  : null
-              }
-              onSelect={(id) => choose({ kind: 'rule', id })}
-              evidence={evidence}
-            />
+            >
+              {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              <span>{isExpanded ? 'Thu nhỏ' : 'Phóng to'}</span>
+            </button>
+            <button
+              ref={presentationToggle}
+              type="button"
+              className="mw-small-button"
+              aria-label="Toggle presentation mode"
+              aria-pressed={presentation}
+              onClick={() => {
+                closeExpanded()
+                setPresentation(!presentation)
+              }}
+            >
+              {presentation ? (
+                <Minimize2 size={14} />
+              ) : (
+                <MonitorPlay size={14} />
+              )}
+              <span>
+                {vi(presentation ? 'Exit presentation' : 'Presentation mode')}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="mw-small-button"
+              aria-label="Print or save methodology as PDF"
+              onClick={() => window.print()}
+            >
+              <Printer size={14} />
+              <span>{vi('Print / Save PDF')}</span>
+            </button>
           </div>
         </div>
-        <aside className="mw-inspector" aria-label={vi('Model inspector')}>
-          {inspector}
-        </aside>
+        {status === 'error' && (
+          <p role="alert" className="mw-run-error">
+            {error}
+          </p>
+        )}
+        <div className="mw-workspace-body">
+          <div className="mw-main-panel">
+            <div
+              id="model-panel-document"
+              className="mw-tab-panel"
+              role="tabpanel"
+              aria-labelledby="model-tab-document"
+              hidden={tab !== 'document'}
+            >
+              <ConventionDocumentView
+                printable={tab === 'document'}
+                context={{
+                  mode: 'raw',
+                  period,
+                  evidence,
+                  result: reconciliationData,
+                  statusText,
+                  onOpenTab: changeTab,
+                }}
+              />
+            </div>
+            <div
+              id="model-panel-pipeline"
+              className="mw-tab-panel"
+              role="tabpanel"
+              aria-labelledby="model-tab-pipeline"
+              hidden={tab !== 'pipeline'}
+            >
+              <PipelineCanvas
+                selection={tab === 'pipeline' ? selection : selections.pipeline}
+                onSelect={choose}
+                scope={scope}
+                onScopeChange={setScope}
+                source={source}
+                onSourceChange={(next) => {
+                  setSource(next)
+                  if (next === 'Dim' && scope === 'flow') setScope('references')
+                }}
+                focusRequest={focusRequest}
+                processingStage={
+                  !isProcessing
+                    ? null
+                    : processingPhase === 'registering'
+                      ? 'source'
+                      : processingPhase === 'recognition'
+                        ? 'recognition'
+                        : processingPhase === 'reconciling'
+                          ? 'reconciliation'
+                          : processingPhase === 'evidence'
+                            ? 'output'
+                            : 'cleaning'
+                }
+              />
+            </div>
+            <div
+              id="model-panel-sources"
+              className="mw-tab-panel"
+              role="tabpanel"
+              aria-labelledby="model-tab-sources"
+              hidden={tab !== 'sources'}
+            >
+              <SourcesAndJoins evidence={evidence} onSelect={choose} />
+            </div>
+            <div
+              id="model-panel-evidence"
+              className="mw-tab-panel"
+              role="tabpanel"
+              aria-labelledby="model-tab-evidence"
+              hidden={tab !== 'evidence'}
+            >
+              <EvidenceTable
+                evidence={evidence}
+                table={table}
+                selection={tab === 'evidence' ? selection : null}
+                onSelect={choose}
+                filters={evidenceFilters}
+                onFiltersChange={changeEvidenceFilters}
+                processing={isProcessing}
+                onTableChange={(id) => {
+                  setTableId(id)
+                  setEvidenceFilters((previous) => ({
+                    ...EMPTY_EVIDENCE_FILTERS,
+                    schema: previous.schema,
+                  }))
+                  setSelections((previous) => ({
+                    ...previous,
+                    evidence: evidence
+                      ? { kind: 'table', id, runId: evidence.runId }
+                      : null,
+                  }))
+                }}
+              />
+            </div>
+            <div
+              id="model-panel-rules"
+              className="mw-tab-panel"
+              role="tabpanel"
+              aria-labelledby="model-tab-rules"
+              hidden={tab !== 'rules'}
+            >
+              <RuleBrowser
+                filters={ruleFilters}
+                onFiltersChange={changeRuleFilters}
+                selectedId={
+                  tab === 'rules' && selection?.kind === 'rule'
+                    ? selection.id
+                    : null
+                }
+                onSelect={(id) => choose({ kind: 'rule', id })}
+                evidence={evidence}
+              />
+            </div>
+          </div>
+          <aside className="mw-inspector" aria-label={vi('Model inspector')}>
+            {inspector}
+          </aside>
+        </div>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent side="right" className="mw-inspector-drawer">
+            <SheetTitle className="sr-only">
+              {vi('Selection inspector')}
+            </SheetTitle>
+            <SheetDescription className="sr-only">
+              Chi tiết chỉ xem của đối tượng đang chọn.
+            </SheetDescription>
+            {inspector}
+          </SheetContent>
+        </Sheet>
+        <PrintDocument
+          evidence={evidence}
+          result={reconciliationData}
+          period={period}
+          files={files}
+          confirmedMappings={confirmedMappings}
+        />
       </div>
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="mw-inspector-drawer">
-          <SheetTitle className="sr-only">
-            {vi('Selection inspector')}
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            Chi tiết chỉ xem của đối tượng đang chọn.
-          </SheetDescription>
-          {inspector}
-        </SheetContent>
-      </Sheet>
-      <PrintDocument
-        evidence={evidence}
-        result={reconciliationData}
-        period={period}
-        files={files}
-        confirmedMappings={confirmedMappings}
-      />
-    </div>
+    </>
   )
 }

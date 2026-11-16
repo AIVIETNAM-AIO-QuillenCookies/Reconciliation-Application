@@ -1,4 +1,5 @@
 import { vi, vt, viMessage, displayValue } from '@/lib/i18n'
+import { InformationNote } from '@/components/PageInformation'
 import {
   Search,
   Table2,
@@ -74,6 +75,7 @@ export function EvidenceTable({
         <div className="mw-toolbar-cluster">
           <Table2 size={15} />
           <select
+            data-tour="processing-select-table"
             aria-label={vi('Table or logical view')}
             value={table?.id ?? ''}
             disabled={!evidence || !evidence.tables.length}
@@ -89,9 +91,11 @@ export function EvidenceTable({
             ))}
           </select>
           {table && (
-            <span className="mw-badge">
-              {table.kind === 'logical' ? vi('Logical view') : vi(table.kind)}
-            </span>
+            <InformationNote title="Loại bảng đang xem">
+              <p>
+                {table.kind === 'logical' ? vi('Logical view') : vi(table.kind)}
+              </p>
+            </InformationNote>
           )}
         </div>
         <button
@@ -139,6 +143,7 @@ export function EvidenceTable({
             <div className="mw-search">
               <Search size={14} />
               <input
+                data-tour="processing-search"
                 aria-label={vi('Search bounded preview')}
                 placeholder={vi('Search retained rows…')}
                 value={filters.query}
@@ -207,7 +212,9 @@ export function EvidenceTable({
               <strong>{filtered.length}</strong>
               {' ' + vi('matching') + ' '}
             </span>
-            <span className="mw-badge">{vi('Bounded preview')}</span>
+            <InformationNote title="Dữ liệu bằng chứng">
+              <p>{vi('Bounded preview')}</p>
+            </InformationNote>
           </div>
           <div
             className="mw-table-scroll"
@@ -261,6 +268,14 @@ export function EvidenceTable({
                     filtered.map(({ row, index }) => (
                       <tr
                         key={index}
+                        data-tour="processing-evidence-row"
+                        data-transaction-id={
+                          row.transaction_id ?? row.receipt_no ?? row.journal_id
+                        }
+                        data-store-key={row.store_key ?? row.store_id}
+                        data-posting-date={
+                          row.posting_date ?? row.business_date
+                        }
                         aria-selected={
                           selection?.kind === 'record' &&
                           selection.rowIndex === index &&
@@ -342,8 +357,8 @@ export function EvidenceTable({
               </table>
             )}
           </div>
-          <footer className="mw-panel-footer">
-            <span>
+          <InformationNote title="Phạm vi bằng chứng xem trước">
+            <p>
               {' ' + vi('Up to') + ' '}
               {evidence.previewLimit}
               {' ' +
@@ -351,9 +366,9 @@ export function EvidenceTable({
                   'retained rows per relation. Filters apply only to this preview.',
                 ) +
                 ' '}
-            </span>
-            <span className="mw-muted">{viMessage(table.grain)}</span>
-          </footer>
+            </p>
+            <p>{viMessage(table.grain)}</p>
+          </InformationNote>
         </>
       )}
     </section>

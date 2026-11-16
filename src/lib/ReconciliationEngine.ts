@@ -73,6 +73,7 @@ import {
   type EvidenceValidation,
   type ProcessingPhase,
 } from './reconciliation-evidence.ts'
+import { quoteIdentifier } from './sql-quoting.ts'
 
 type Database = Pick<
   AsyncDuckDB,
@@ -83,12 +84,15 @@ export type SpreadsheetDecoder = (
   signal?: AbortSignal,
   headerRow?: number,
   format?: 'csv' | 'xlsx',
+  sheetName?: string,
+  file?: File,
 ) => Promise<string>
 export type DimSpreadsheetDecoder = (
   buffer: ArrayBuffer,
   signal?: AbortSignal,
   headerRow?: number,
   selectedSheets?: Record<string, { headerRow: number }>,
+  file?: File,
 ) => Promise<DecodedSheet[]>
 export interface UploadProcessingOptions {
   onFailure?: (failure: RunFailure) => void
@@ -159,7 +163,6 @@ export function validatePeriod(period: ReconciliationPeriod): void {
 function checkAbort(signal?: AbortSignal) {
   signal?.throwIfAborted()
 }
-const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`
 function exactCents(value: unknown): number {
   const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(String(value))
   if (!match)
@@ -197,15 +200,32 @@ export class ReconciliationEngine {
       ((warning) => console.warn(`[Reconciliation mapping] ${warning}`))
     this.decodeSpreadsheet =
       decodeSpreadsheet ??
-      ((buffer, signal, headerRow = 1, format = 'xlsx') =>
+      ((buffer, signal, headerRow = 1, format = 'xlsx', sheetName, file) =>
         import('./spreadsheet.ts').then(({ workbookToCSV }) =>
-          workbookToCSV(buffer, signal, headerRow, format),
+          import('./workbook-cache.ts').then(({ cachedWorkbook }) =>
+            workbookToCSV(
+              buffer,
+              signal,
+              headerRow,
+              format,
+              sheetName,
+              cachedWorkbook(file),
+            ),
+          ),
         ))
     this.decodeDimSpreadsheet =
       decodeDimSpreadsheet ??
-      ((buffer, signal, headerRow = 1, selectedSheets) =>
+      ((buffer, signal, headerRow = 1, selectedSheets, file) =>
         import('./spreadsheet.ts').then(({ workbookToSheets }) =>
-          workbookToSheets(buffer, signal, headerRow, selectedSheets),
+          import('./workbook-cache.ts').then(({ cachedWorkbook }) =>
+            workbookToSheets(
+              buffer,
+              signal,
+              headerRow,
+              selectedSheets,
+              cachedWorkbook(file),
+            ),
+          ),
         ))
   }
 
@@ -327,6 +347,7 @@ export class ReconciliationEngine {
                   signal,
                   headerRow,
                   selectedSheets,
+                  entry.file,
                 )
               : [
                   {
@@ -341,6 +362,8 @@ export class ReconciliationEngine {
                         ? Object.values(selectedSheets)[0].headerRow
                         : headerRow,
                       isExcel ? 'xlsx' : 'csv',
+                      entry.sheetName,
+                      entry.file,
                     ),
                   },
                 ]
@@ -967,6 +990,17 @@ export class ReconciliationEngine {
           this.schemaMode === 'accounting'
             ? VALIDATION_SQL.slice(3)
             : VALIDATION_SQL
+        if (this.schemaMode === 'accounting') {
+          const unsupported = await connection.query(
+            'SELECT COUNT(*) AS n FROM raw_web WHERE __web_requires_fx',
+          )
+          if (Number(unsupported.toArray()[0].n)) {
+            progressContext = { source: 'WEB' }
+            throw new Error(
+              '[WEB_FX_NOT_SUPPORTED] WEB có số tiền nội tệ chưa quy đổi. Pipeline hiện chỉ đổi FX cho POS. Chọn cột USD thực sự hoặc dùng chế độ tham chiếu Excel có nhãn rõ ràng; không thể coi nội tệ là USD.',
+            )
+          }
+        }
         for (const rule of rules) {
           checkAbort(signal)
           progressContext = {

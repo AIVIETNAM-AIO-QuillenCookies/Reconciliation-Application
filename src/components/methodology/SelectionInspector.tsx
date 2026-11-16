@@ -1,5 +1,6 @@
 import { nodeTypeLabel } from '@/lib/localized-model'
 import { LocalizedNote } from '@/components/LocalizedError'
+import { InformationNote } from '@/components/PageInformation'
 import { displayRules as methodologyRules } from '@/lib/localized-model'
 import {
   displayNodeById as nodeById,
@@ -14,7 +15,6 @@ import {
   Braces,
   Check,
   Copy,
-  Database,
   GitBranch,
   MousePointer2,
   Table2,
@@ -700,12 +700,11 @@ export function SelectionInspector({
               </>
             )}
           </div>
-          <footer className="mw-inspector-footer">
-            <Database size={12} />
+          <InformationNote title="Khung chi tiết mô hình">
             {' ' +
               vi('View only · Processing configuration is unchanged') +
               ' '}
-          </footer>
+          </InformationNote>
         </>
       )}
     </div>

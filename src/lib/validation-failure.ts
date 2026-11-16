@@ -1,6 +1,7 @@
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm'
 import type { QueuedFile, Source } from './uploads.ts'
 import type { FailureReason, RunFailure } from './run-failure.ts'
+import { quoteLiteral } from './sql-quoting.ts'
 
 type Check = { code: string; fields: string[]; message: string; where: string }
 const web: Check[] = [
@@ -145,7 +146,7 @@ export async function captureValidationFailure(
     const path = options.paths.get(source as Source)![fileIndex]
     const original = (
       await connection.query(
-        `SELECT * FROM read_csv_auto('${path.replaceAll("'", "''")}', header=true, all_varchar=true) LIMIT 1 OFFSET ${sourceRecord - 1}`,
+        `SELECT * FROM read_csv_auto(${quoteLiteral(path)}, header=true, all_varchar=true) LIMIT 1 OFFSET ${sourceRecord - 1}`,
       )
     ).toArray()[0]
     samples.push({

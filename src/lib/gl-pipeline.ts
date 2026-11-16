@@ -3,6 +3,7 @@ import type { QueuedFile } from './uploads.ts'
 import type { ConfirmedFileMapping } from './data-mapping.ts'
 import { sourceRecordRows } from './source-coordinates.ts'
 import * as XLSX from 'xlsx'
+import { cachedWorkbook } from './workbook-cache.ts'
 import { dateSQL } from './reconciliation-sql.ts'
 import {
   glFingerprint,
@@ -13,8 +14,8 @@ import {
   type GLReviewSnapshot,
   type GLTransformation,
 } from './gl-review.ts'
+import { quoteLiteral as literal } from './sql-quoting.ts'
 
-const literal = (s: string) => `'${s.replaceAll("'", "''")}'`
 const money = (s: string) => `TRY_CAST(${s} AS DECIMAL(18,2))`
 export const ACCOUNTING_GL_SQL = [
   `CREATE TEMP TABLE gl_normalized AS SELECT * EXCLUDE (journal_id, store_key, journal_type, posting_date, amount_usd, period, channel),
@@ -81,7 +82,7 @@ export async function prepareGLReview(
   for (const [fileIndex, file] of sourceFiles.entries()) {
     coordinates.set(
       file.id,
-      await sourceRecordRows(file.file, file.headerRow ?? 1),
+      await sourceRecordRows(file.file, file.headerRow ?? 1, file.sheetName),
     )
     const path = options.glPaths?.[fileIndex]
     if (path) {
@@ -104,12 +105,14 @@ export async function prepareGLReview(
     }
     if (file.file.name.toLowerCase().endsWith('.xlsx')) {
       try {
-        const workbook = XLSX.read(await file.file.arrayBuffer(), {
-          type: 'array',
-          bookSheets: true,
-        })
-        if (workbook.SheetNames[0])
-          sheetNames.set(file.id, workbook.SheetNames[0])
+        const workbook =
+          cachedWorkbook(file.file) ??
+          XLSX.read(await file.file.arrayBuffer(), {
+            type: 'array',
+            bookSheets: true,
+          })
+        if (file.sheetName ?? workbook.SheetNames[0])
+          sheetNames.set(file.id, file.sheetName ?? workbook.SheetNames[0])
       } catch {
         /* Unknown worksheet remains labeled explicitly below. */
       }

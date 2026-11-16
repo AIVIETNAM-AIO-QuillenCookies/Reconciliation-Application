@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Maximize2 } from 'lucide-react'
+import { InformationNote } from '@/components/PageInformation'
 import {
   Dialog,
   DialogContent,
@@ -174,6 +175,8 @@ export function DashboardWidgetProvider({
         }}
       >
         <DialogContent
+          data-tour="dashboard-expanded"
+          data-expanded-widget={current?.widget.id}
           className="dash-expanded-dialog"
           closeLabel="Đóng vùng phóng to"
           onCloseAutoFocus={(event) => {
@@ -269,6 +272,7 @@ export function DashboardWidget({
     <section
       className={`dash-card dash-widget ${className}`}
       data-widget-id={id}
+      data-tour={`dashboard-widget-${id}`}
       data-widget-expanded={expanded ? 'true' : 'false'}
     >
       <header
@@ -303,7 +307,9 @@ export function DashboardWidget({
               title
             )}
           </h2>
-          {subtitle && <p>{subtitle}</p>}
+          {subtitle && (
+            <InformationNote title={title}>{subtitle}</InformationNote>
+          )}
         </div>
         <div className="dash-widget-actions">
           {action}
@@ -311,6 +317,7 @@ export function DashboardWidget({
             <button
               type="button"
               className="dash-expand-button"
+              data-tour={`dashboard-expand-${id}`}
               aria-label={`Phóng to ${title}`}
               title={`Phóng to ${title}`}
               onClick={(event) => open(event.currentTarget)}

@@ -3,16 +3,13 @@ import { Popover } from 'radix-ui'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
-  BookOpen,
   ChevronDown,
   Database,
-  FileSpreadsheet,
   Info,
   LoaderCircle,
   RotateCcw,
   SlidersHorizontal,
   UploadCloud,
-  X,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import {
@@ -29,6 +26,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { LocalizedError } from '@/components/LocalizedError'
+import { InformationNote } from '@/components/PageInformation'
 import {
   DashboardWaterfall,
   ImpactRanking,
@@ -41,9 +39,10 @@ import {
   Kpi,
   type InspectSelection,
 } from './DashboardPrimitives'
-import { money, percent, shortMonth } from '@/lib/dashboard-format'
+import { money, percent } from '@/lib/dashboard-format'
+import { summaryBridge } from '@/lib/dashboard-summary'
+import { Matrix, SourcePanel } from './DashboardPanels'
 import { DetailTab, QualityTab } from './DetailQualityTabs'
-import { sumReferenceUSD } from '@/lib/excel-reference'
 import {
   DashboardWidget,
   DashboardWidgetProvider,
@@ -64,244 +63,6 @@ const channelLabels: Record<string, string> = {
   STORE: 'Cửa hàng · POS',
   WEB: 'Online · WEB',
   UNALLOCATED: 'Chưa phân bổ',
-}
-
-function summaryBridge(
-  rows: DashboardModel['bridge'],
-): DashboardModel['bridge'] {
-  const first = rows.find((row) => row.kind === 'sales')
-  const last = rows.find((row) => row.kind === 'finance')
-  if (!first || !last) return []
-  let running = first.amountUSD
-  const groups = (
-    ['rule', 'error', 'rounding', 'unexplained'] as const
-  ).flatMap((category) => {
-    const children = rows.filter((row) => row.category === category)
-    if (!children.length) return []
-    const amountUSD = sumReferenceUSD(children.map((row) => row.amountUSD))
-    const startUSD = running
-    running = sumReferenceUSD([running, amountUSD])
-    return [
-      {
-        id: `group-${category}`,
-        label: {
-          rule: 'Quy tắc ghi nhận',
-          error: 'Lỗi dữ liệu',
-          rounding: 'Làm tròn',
-          unexplained: 'Chưa giải thích',
-        }[category],
-        kind: 'adjustment' as const,
-        category,
-        amountUSD,
-        startUSD,
-        endUSD: running,
-        monthly: Object.fromEntries(
-          Object.keys(first.monthly).map((month) => [
-            month,
-            sumReferenceUSD(children.map((row) => row.monthly[month] ?? 0)),
-          ]),
-        ),
-        sourceRows: children.flatMap((row) => row.sourceRows),
-        detailCodes: children.flatMap((row) => row.detailCodes),
-        sourceRowsTruncated: children.some((row) => row.sourceRowsTruncated),
-        detailCount: children.reduce(
-          (sum, row) => sum + (row.detailCount ?? 0),
-          0,
-        ),
-      },
-    ]
-  })
-  return [first, ...groups, last]
-}
-
-function Matrix({
-  model,
-  bridge,
-  onSelect,
-  onBridgeSelect,
-}: {
-  model: DashboardModel
-  bridge?: boolean
-  onSelect: (selection: InspectSelection) => void
-  onBridgeSelect?: (row: DashboardModel['bridge'][number]) => void
-}) {
-  const rows = bridge
-    ? model.bridge.map((row) => ({ ...row, totalUSD: row.amountUSD }))
-    : model.matrix
-  const fullYear =
-    model.months.length === 12 &&
-    model.months[0].endsWith('-01') &&
-    model.months.at(-1) === `${model.months[0].slice(0, 4)}-12`
-  return (
-    <div
-      className="dash-table-scroll dash-matrix"
-      tabIndex={0}
-      role="region"
-      aria-label={
-        bridge
-          ? fullYear
-            ? 'Ma trận cầu nối 12 tháng và cả năm'
-            : 'Ma trận cầu nối theo tháng và toàn kỳ nguồn'
-          : 'Ma trận doanh thu theo kênh và tháng'
-      }
-    >
-      <table className="dash-table">
-        <thead>
-          <tr>
-            <th>Khoản mục / USD</th>
-            {model.months.map((month) => (
-              <th
-                key={month}
-                className={`dash-number ${model.selectedMonths.includes(month) ? 'dash-selected-month' : ''}`}
-              >
-                {shortMonth(month)}
-                <small>{month.slice(0, 4)}</small>
-              </th>
-            ))}
-            <th className="dash-number">
-              {fullYear ? 'Cả năm' : 'Toàn kỳ nguồn'}
-            </th>
-            <th className="dash-number">Kỳ chọn</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>
-                <button
-                  className="dash-text-button"
-                  onClick={() => {
-                    const sourceRow = bridge
-                      ? model.bridge.find((item) => item.id === row.id)
-                      : null
-                    if (sourceRow && onBridgeSelect) {
-                      onBridgeSelect(sourceRow)
-                      return
-                    }
-                    onSelect({
-                      title: row.label,
-                      description:
-                        'Giá trị theo tháng · USD. Ô — là dữ liệu chưa có, không phải giá trị 0.',
-                      rows: model.months.map((month) => ({
-                        Tháng: month,
-                        'Giá trị USD': row.monthly[month] ?? null,
-                      })),
-                    })
-                  }}
-                >
-                  {row.label}
-                </button>
-              </td>
-              {model.months.map((month) => (
-                <td
-                  key={month}
-                  className={`dash-number ${model.selectedMonths.includes(month) ? 'dash-selected-month' : ''}`}
-                  title={`${row.label} · ${month} · ${money(row.monthly[month])} USD`}
-                >
-                  {money(row.monthly[month])}
-                </td>
-              ))}
-              <td className="dash-number">
-                {model.months.length > 0 &&
-                model.months.every((month) => row.monthly[month] != null)
-                  ? money(
-                      sumReferenceUSD(
-                        model.months.map((month) => row.monthly[month]!),
-                      ),
-                    )
-                  : '—'}
-              </td>
-              <td className="dash-number">
-                <strong>{money(row.totalUSD)}</strong>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!rows.length && (
-        <EmptyWidget>
-          Chưa có bảng tổng hợp tháng. Nhập nguồn hoặc mở workbook Excel tham
-          chiếu.
-        </EmptyWidget>
-      )}
-    </div>
-  )
-}
-
-function SourcePanel({
-  onInspect,
-  notes,
-}: {
-  onInspect: (selection: InspectSelection) => void
-  notes: string[]
-}) {
-  const store = useAppStore()
-  const active = store.activeResult
-  const open = () => {
-    if (active.source === 'excel')
-      onInspect({
-        title: 'Thông tin dữ liệu · Nguồn Excel tham chiếu',
-        panel: 'source',
-        description: `${active.workbook.fileName} · Phiên xem thử trong tab này. USD giữ nguyên từ workbook, cộng theo tháng; không quy đổi FX thêm. Δ = GL − Flash; Δ% = Δ / Flash.`,
-        rows: [
-          ...Object.values(active.workbook.sheets).map((sheet) => ({
-            File: active.workbook.fileName,
-            Sheet: sheet.name,
-            'Số dòng': sheet.rows.length,
-            'Các trường': sheet.columns.join(', '),
-          })),
-          ...notes.map((note) => ({ 'Lưu ý dữ liệu': note })),
-        ],
-        links: [{ label: 'Mở quy tắc và mô hình dữ liệu', to: '/methodology' }],
-      })
-    else
-      onInspect({
-        title: 'Thông tin dữ liệu · Nguồn pipeline Raw',
-        panel: 'source',
-        description: `Phiên: ${active.result?.evidence?.runId ?? 'chưa có kết quả'}. ${active.result?.period.start ?? active.period.start} → ${active.result?.period.end ?? active.period.end}. Giá trị đã chuẩn hóa theo cấu hình của phiên; Δ = GL − Flash. Lọc dashboard chỉ đọc snapshot và không chạy lại pipeline.`,
-        rows: [
-          ...(active.result?.evidence?.files.map((file) => ({
-            File: file.fileName,
-            Nguồn: file.source,
-            'Dòng tiêu đề': file.headerRow,
-            'Ánh xạ': JSON.stringify(file.columns),
-            'Ghi chú': file.notes.join('; '),
-          })) ??
-            store.files.map((file) => ({
-              File: file.file.name,
-              Nguồn: file.source,
-              'Dòng tiêu đề': file.headerRow ?? 1,
-            }))),
-          ...notes.map((note) => ({ 'Lưu ý dữ liệu': note })),
-        ],
-        links: [
-          { label: 'Xem quy tắc và bảng dữ liệu nguồn', to: '/methodology' },
-          { label: 'Xem cấu hình nhập dữ liệu', to: '/ingestion' },
-        ],
-      })
-  }
-  return (
-    <button
-      className={`dash-source-chip ${active.source === 'excel' ? 'is-excel' : ''}`}
-      onClick={open}
-      title="Thông tin dữ liệu · file, sheet, phiên xử lý và các lưu ý"
-      aria-label={
-        active.source === 'excel'
-          ? 'Thông tin dữ liệu: Excel tham chiếu'
-          : 'Thông tin dữ liệu: Raw'
-      }
-    >
-      {active.source === 'excel' ? (
-        <FileSpreadsheet size={13} />
-      ) : (
-        <Database size={13} />
-      )}
-      <span>
-        {active.source === 'excel' ? 'Excel tham chiếu' : 'Web tính toán · Raw'}
-      </span>
-      <Info size={12} />
-    </button>
-  )
 }
 
 export function Dashboard() {
@@ -444,7 +205,24 @@ function DashboardWorkspace() {
   const isLoading = active.source === 'raw' && store.isProcessing
   const hasResults = model.available
   return (
-    <div className="dashboard-suite" data-dashboard-source={active.source}>
+    <div
+      className="dashboard-suite"
+      data-tour="dashboard"
+      data-dashboard-source={active.source}
+      data-dashboard-tab={tab}
+      data-dashboard-from={filters.startMonth}
+      data-dashboard-to={filters.endMonth}
+      data-dashboard-ready={hasResults}
+    >
+      {!!model.filterNotes.length && (
+        <InformationNote title="Nguồn dữ liệu và phạm vi bộ lọc">
+          <ul>
+            {model.filterNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </InformationNote>
+      )}
       <header className="dash-page-heading">
         <div>
           <h1>Dashboard đối soát</h1>
@@ -461,13 +239,18 @@ function DashboardWorkspace() {
               Tắt xem thử · Raw
             </Button>
           )}
-          <Button size="sm" onClick={store.openOnboarding}>
+          <Button
+            size="sm"
+            data-tour="dashboard-import"
+            onClick={store.openOnboarding}
+          >
             <UploadCloud size={14} />
             Nhập dữ liệu
           </Button>
         </div>
       </header>
       <section
+        data-tour="dashboard-filters"
         className="dash-filters"
         aria-label="Bộ lọc dùng chung dashboard"
       >
@@ -475,6 +258,7 @@ function DashboardWorkspace() {
         <label>
           Từ tháng
           <select
+            data-tour="dashboard-from"
             aria-label="Từ tháng"
             value={filters.startMonth}
             onChange={(e) =>
@@ -500,6 +284,7 @@ function DashboardWorkspace() {
         <label>
           Đến tháng
           <select
+            data-tour="dashboard-to"
             aria-label="Đến tháng"
             value={filters.endMonth}
             onChange={(e) =>
@@ -525,6 +310,7 @@ function DashboardWorkspace() {
         <label>
           Kênh
           <select
+            data-tour="dashboard-channel"
             aria-label="Kênh"
             value={filters.channel}
             onChange={(e) => update({ channel: e.target.value })}
@@ -588,9 +374,6 @@ function DashboardWorkspace() {
           <RotateCcw size={13} />
           Đặt lại
         </button>
-        <span className="dash-scope">
-          USD · {filters.startMonth} → {filters.endMonth}
-        </span>
       </section>
       {isLoading && (
         <div className="dash-status" role="status">
@@ -614,7 +397,7 @@ function DashboardWorkspace() {
       >
         <TabsList aria-label="Các trang dashboard" className="dash-tab-list">
           {Object.entries(tabLabels).map(([id, label], index) => (
-            <TabsTrigger value={id} key={id}>
+            <TabsTrigger value={id} key={id} data-tour={`dashboard-tab-${id}`}>
               <span className="dash-tab-number">0{index + 1}</span>
               {label}
             </TabsTrigger>
@@ -687,7 +470,7 @@ function DashboardWorkspace() {
             </div>
           )}
         <TabsContent value="overview" className="dash-tab-content">
-          <div className="dash-kpis">
+          <div className="dash-kpis" data-tour="dashboard-kpis">
             <Kpi
               label="Doanh số Sales Flash"
               value={money(values.flashUSD)}
@@ -784,11 +567,11 @@ function DashboardWorkspace() {
               subtitle="USD · tháng được chọn tô nền · cuộn ngang trong bảng"
               className="dash-matrix-card"
             >
-              {active.source === 'excel' && (
-                <p className="dash-scope-note">
+              {active.source === 'excel' && !active.workbook.dashboard && (
+                <InformationNote title="Phân bổ doanh thu theo kênh">
                   Chưa có bảng Flash và GL phân bổ theo kênh. Các dòng dưới là
                   tổng tất cả kênh từ Cau_noi.
-                </p>
+                </InformationNote>
               )}
               <Matrix model={model} onSelect={setInspection} />
             </DashboardWidget>
@@ -893,9 +676,9 @@ function DashboardWorkspace() {
                   : 'Web tính toán · kiểm tra đẳng thức của phiên Raw'
               }
             >
-              <p className="dash-preview-note">
+              <InformationNote title="Kiểm tra cầu nối · xem đầy đủ">
                 Bản xem trước · phóng to để xem số thực tế và số đối chiếu.
-              </p>
+              </InformationNote>
               <DataTable
                 rows={model.checks}
                 label="kiểm tra cầu nối"
@@ -959,34 +742,22 @@ function DashboardWorkspace() {
           <QualityTab model={model} onInspect={setInspection} />
         </TabsContent>
       </Tabs>
-      <footer className="dash-footer">
-        <span>
-          Δ = GL − nguồn · Ngưỡng cửa hàng–tháng: |Δ| &gt; 200 USD và |Δ / |GL||
-          &gt; 1%
-        </span>
-        <div>
-          {(params.has('from') ||
-            params.has('to') ||
-            params.has('channel') ||
-            params.has('country')) && (
-            <button onClick={reset}>
-              <X size={12} />
-              Xóa lựa chọn
-            </button>
-          )}
-          <Link to="/methodology">
-            <BookOpen size={12} />
-            Quy tắc & dữ liệu
-          </Link>
-        </div>
-      </footer>
+      <InformationNote title="Quy ước chênh lệch và ngưỡng kiểm tra">
+        Δ = GL − nguồn · Ngưỡng cửa hàng–tháng: |Δ| &gt; 200 USD và |Δ / |GL||
+        &gt; 1%
+        <Link to="/methodology">Quy tắc & dữ liệu</Link>
+      </InformationNote>
       <Sheet
         open={!!inspection}
         onOpenChange={(open) => {
           if (!open) setInspection(null)
         }}
       >
-        <SheetContent side="right" className="dash-inspector">
+        <SheetContent
+          side="right"
+          className="dash-inspector"
+          data-tour="dashboard-inspector"
+        >
           <SheetTitle>{inspection?.title ?? 'Chi tiết dashboard'}</SheetTitle>
           <SheetDescription>{inspection?.description}</SheetDescription>
           {inspection && (

@@ -1,0 +1,38 @@
+# The Vercel CLI uploads this folder as it is and does not read .gitignore.
+# Keep this list in step with .gitignore so `vercel deploy` sends the same
+# files as a deploy from GitHub (Git deploys only see committed files anyway).
+node_modules
+dist
+dist-ssr
+*.local
+logs
+*.log
+
+# Local configuration, credentials and deployment state
+.env
+.env.*
+!.env.example
+.vercel
+.aws
+.npm-cache
+.claude
+
+# Generated audits, browser QA and local input/output files
+outputs
+.tmp
+.tmp-*
+tmp
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+uploads
+reports
+
+# Editors, Office lock files and OS metadata
+.vscode
+.idea
+.DS_Store
+~$*
+Thumbs.db
+desktop.ini

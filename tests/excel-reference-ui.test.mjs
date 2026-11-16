@@ -88,7 +88,18 @@ test('Excel source replaces all result screens and disabling restores the blocke
     server = await createServer({
       configFile: false,
       cacheDir: 'node_modules/.vite-tests/excel-reference-ui',
-      plugins: [react()],
+      plugins: [
+        react(),
+        {
+          name: 'test-independent-excel-engine',
+          enforce: 'pre',
+          load(id) {
+            if (id.replaceAll('\\', '/').endsWith('/src/hooks/useDuckDB.tsx'))
+              return `export const DuckDBProvider = ({ children }) => children;
+                export function useDuckDB() { return { status: 'error', database: null, error: new Error('WASM unavailable'), retry() {} } }`
+          },
+        },
+      ],
       resolve: {
         alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) },
       },
@@ -98,7 +109,7 @@ test('Excel source replaces all result screens and disabling restores the blocke
     })
     const React = await import('react')
     const { createRoot } = await import('react-dom/client')
-    const { MemoryRouter } = await import('react-router-dom')
+    const { MemoryRouter, Routes, Route } = await import('react-router-dom')
     const { act, createElement: h } = React
     const { createAppStore, AppStoreContext } =
       await server.ssrLoadModule('/src/lib/store.ts')
@@ -106,6 +117,14 @@ test('Excel source replaces all result screens and disabling restores the blocke
       await server.ssrLoadModule(
         '/src/components/excel-reference/ExcelReferenceControls.tsx',
       )
+    const { PageInformationProvider, PageInformationButton } =
+      await server.ssrLoadModule('/src/components/PageInformation.tsx')
+    const { AppLayout } = await server.ssrLoadModule(
+      '/src/components/layout/AppLayout.tsx',
+    )
+    const { GuideWorkspace } = await server.ssrLoadModule(
+      '/src/components/guide/GuideWorkspace.tsx',
+    )
     const pages = await Promise.all(
       [
         ['Dashboard', '/'],
@@ -134,11 +153,11 @@ test('Excel source replaces all result screens and disabling restores the blocke
     await store.whenSettled()
     assert.equal(store.getState().status, 'error')
     const raw = store.getState()
-    const bytes = await readFile(
+    let bytes = await readFile(
       new URL('../public/reference/excel-reference.xlsx', import.meta.url),
     )
     expose('fetch', async (url) => {
-      assert.match(String(url), /reference\/excel-reference\.xlsx$/)
+      assert.match(String(url), /demo\/Nexa_Home_Recon_Dataset_Final\.xlsx$/)
       return {
         ok: true,
         arrayBuffer: async () =>
@@ -153,15 +172,20 @@ test('Excel source replaces all result screens and disabling restores the blocke
       act(async () => {
         root.render(
           h(
-            MemoryRouter,
-            { key: path, initialEntries: [path] },
+            PageInformationProvider,
+            null,
             h(
-              AppStoreContext.Provider,
-              { value: store },
-              h(ExcelReferenceButton),
-              h(ExcelReferenceBanner),
-              h(ExcelReferenceDialog),
-              h(component),
+              MemoryRouter,
+              { key: path, initialEntries: [path] },
+              h(
+                AppStoreContext.Provider,
+                { value: store },
+                h(ExcelReferenceButton),
+                h(ExcelReferenceBanner),
+                h(ExcelReferenceDialog),
+                h(PageInformationButton, { page: path, scope: path }),
+                h(component),
+              ),
             ),
           ),
         )
@@ -214,6 +238,20 @@ test('Excel source replaces all result screens and disabling restores the blocke
       document.querySelector('[aria-label="Doanh số Sales Flash"] strong')
         .textContent
     assert.match(salesKpi(), /31\.124\.401,00/)
+    assert.equal(document.querySelector('.dash-footer'), null)
+    assert.equal(document.querySelector('.dash-filters .dash-scope'), null)
+    await click(document.querySelector('[aria-label="Thông tin trang"]'))
+    const overviewInformation = document.querySelector(
+      '.page-information-dialog',
+    )
+    assert.ok(overviewInformation)
+    assert.match(
+      overviewInformation.textContent,
+      /Quy ước chênh lệch và ngưỡng kiểm tra/,
+    )
+    assert.match(overviewInformation.textContent, /200 USD/)
+    await click(document.querySelector('[aria-label="Đóng thông tin trang"]'))
+    assert.equal(document.querySelector('.page-information-dialog'), null)
     assert.match(
       document.querySelector('[aria-label="Chênh lệch GL − Flash"] strong')
         .textContent,
@@ -444,6 +482,38 @@ test('Excel source replaces all result screens and disabling restores the blocke
       assert.equal(store.getState().pipelineProgress, raw.pipelineProgress)
       assert.equal(store.getState().reviewCases, raw.reviewCases)
     }
+    // Rules & Data Model reads as the conventions document with live workbook facts.
+    await render(pages[3])
+    const conventionPaper = document.querySelector(
+      '.reference-methodology .cd-paper',
+    )
+    assert.ok(conventionPaper)
+    assert.match(conventionPaper.textContent, /Áp dụng · Excel tham chiếu/)
+    assert.match(conventionPaper.textContent, /Ba bảng của workbook tham chiếu/)
+    assert.match(conventionPaper.textContent, /Workbook · USD/)
+    assert.match(conventionPaper.textContent, /31\.124\.401,00/)
+    assert.match(conventionPaper.textContent, /28\.698\.496,23/)
+    assert.ok(
+      conventionPaper.textContent.includes(
+        `${workbook.bridgeRows.length} dòng`,
+      ),
+    )
+    assert.match(conventionPaper.textContent, /kiểm tra/)
+    assert.doesNotMatch(conventionPaper.textContent, /RAW FLASH SENTINEL/)
+    await click(
+      document.querySelector('button[aria-label="Phóng to tài liệu"]'),
+    )
+    assert.ok(
+      document
+        .querySelector('.reference-methodology .cd-shell')
+        .classList.contains('is-expanded-view'),
+    )
+    assert.ok(document.querySelector('.expand-backdrop'))
+    await act(async () =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })),
+    )
+    assert.equal(document.querySelector('.is-expanded-view'), null)
+    assert.equal(document.querySelector('.expand-backdrop'), null)
     for (const path of [
       '/processing?run=raw-old&table=gl_clean',
       '/processing?sheet=gl_clean',
@@ -454,8 +524,15 @@ test('Excel source replaces all result screens and disabling restores the blocke
         unavailable.textContent,
         /Chưa có dữ liệu tương ứng trong file tham chiếu\./,
       )
-      assert.match(unavailable.textContent, /Kết quả tham chiếu Excel/)
-      assert.ok(unavailable.textContent.includes(workbook.fileName))
+      assert.doesNotMatch(unavailable.textContent, /Kết quả tham chiếu Excel/)
+      assert.ok(!unavailable.textContent.includes(workbook.fileName))
+      await click(document.querySelector('[aria-label="Thông tin trang"]'))
+      assert.ok(
+        document
+          .querySelector('[role="dialog"]')
+          .textContent.includes(workbook.fileName),
+      )
+      await click(document.querySelector('[aria-label="Đóng thông tin trang"]'))
       assert.doesNotMatch(document.body.textContent, /RAW FLASH SENTINEL/)
       assert.equal(document.querySelector('table'), null)
       const sourceLink = [...unavailable.querySelectorAll('a')].find(
@@ -498,6 +575,330 @@ test('Excel source replaces all result screens and disabling restores the blocke
     assert.equal(rawRuns, runsBeforeFiltering)
     assert.equal(store.getState().files, raw.files)
     assert.equal(store.getState().runFailure, raw.runFailure)
+
+    // The default action now reads the full Nexa dataset. Keep the preceding
+    // legacy three-sheet regression, then verify all four real dashboard tabs.
+    bytes = await readFile(
+      new URL(
+        '../public/demo/Nexa_Home_Recon_Dataset_Final.xlsx',
+        import.meta.url,
+      ),
+    )
+    await act(async () => {
+      button('Tạm xem theo Excel').click()
+      await new Promise((resolve, reject) => {
+        const unsubscribe = store.subscribe(() => {
+          const reference = store.getState().excelReference
+          if (reference.status === 'ready' || reference.status === 'error') {
+            unsubscribe()
+            if (reference.error) reject(new Error(reference.error))
+            else resolve()
+          }
+        })
+      })
+    })
+    const nexa = store.getState().excelReference.workbook
+    assert.ok(nexa.dashboard)
+    assert.equal(nexa.fileName, 'Nexa_Home_Recon_Dataset_Final.xlsx')
+    await click(button('Hiển thị dashboard'))
+    assert.match(salesKpi(), /31\.124\.401,00/)
+    assert.ok(
+      document.querySelector('[data-widget-id="overview-matrix"] tbody tr'),
+    )
+    assert.doesNotMatch(
+      document.querySelector('[data-widget-id="overview-matrix"]').textContent,
+      /Chưa có bảng Flash và GL phân bổ theo kênh/,
+    )
+    await selectTab('Cầu nối chênh lệch')
+    assert.ok(
+      document.querySelector('[aria-label="Xếp hạng độ lớn ảnh hưởng"] button'),
+    )
+    await selectTab('Đối soát chi tiết')
+    const detail = document.querySelector('[data-tour="dashboard-detail"]')
+    assert.ok(Number(detail.dataset.cellCount) > 0)
+    assert.equal(detail.querySelectorAll('.dash-empty').length, 0)
+    assert.ok(
+      document.querySelector(
+        '[data-widget-id="detail-store-trend"] .recharts-wrapper',
+      ),
+    )
+    assert.ok(
+      document.querySelector(
+        '[data-widget-id="detail-online-trend"] .recharts-wrapper',
+      ),
+    )
+    assert.ok(
+      document.querySelector('[data-widget-id="detail-stores"] tbody tr'),
+    )
+    await selectTab('Hoàn trả & chất lượng')
+    const quality = document.querySelector('[data-tour="dashboard-quality"]')
+    assert.equal(quality.dataset.cancelledOrders, '124')
+    assert.equal(quality.dataset.duplicateExports, '12')
+    assert.equal(quality.dataset.manualJournals, '15')
+    assert.equal(
+      document
+        .querySelector('[aria-label="Tỷ lệ hàng trả"] .financial-value')
+        .textContent.trim(),
+      '2,21%',
+    )
+    assert.ok(
+      document.querySelector(
+        '[data-widget-id="quality-return-rate"] .recharts-wrapper',
+      ),
+    )
+    assert.equal(
+      document.querySelectorAll('[aria-label="bút toán tay"] tbody tr').length,
+      15,
+    )
+    assert.match(
+      document.querySelector('[data-widget-id="quality-manuals"]').textContent,
+      /Chưa xác minh · tham chiếu Excel/,
+    )
+    const checks = document.querySelector('[data-widget-id="quality-checks"]')
+    assert.ok(
+      nexa.dashboard.validations.some(
+        (row) => row.count == null && !row.status,
+      ),
+    )
+    assert.match(checks.textContent, /Chưa đánh giá/)
+    assert.ok(checks.querySelectorAll('tbody tr').length > 0)
+    const unknownCheck = [...checks.querySelectorAll('tbody tr')].find((row) =>
+      row.textContent.includes('Chưa đánh giá'),
+    )
+    assert.equal(unknownCheck.querySelectorAll('td')[1].textContent, '—')
+    assert.doesNotMatch(quality.textContent, /Chưa có dữ liệu để tính/)
+
+    // The source workspace keeps the precise source value available while
+    // presenting readable money and human-readable sheet labels.
+    await render({ ...pages[2], path: '/processing?sheet=Cau_noi' })
+    const processing = document.querySelector('.reference-processing')
+    assert.ok(processing)
+    const bridgeTab = processing.querySelector('button[aria-label="Cau_noi"]')
+    assert.match(bridgeTab.textContent, /Cầu nối doanh thu/)
+    assert.equal(bridgeTab.getAttribute('aria-pressed'), 'true')
+    const originalMoney = nexa.bridgeRows.find(
+      (row) => row.kind === 'adjustment',
+    ).monthly['2025-01']
+    const readableMoney = processing.querySelector(
+      `td[title="${String(originalMoney)}"]`,
+    )
+    assert.ok(readableMoney)
+    assert.equal(
+      readableMoney.textContent,
+      new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(originalMoney),
+    )
+    assert.equal(readableMoney.title, String(originalMoney))
+    await click(processing.querySelector('button[aria-label="Chi_tiet"]'))
+    assert.match(
+      processing.querySelector('button[aria-label="Chi_tiet"]').textContent,
+      /Chi tiết giao dịch/,
+    )
+    assert.equal(
+      processing
+        .querySelector('button[aria-label="Chi_tiet"]')
+        .getAttribute('aria-pressed'),
+      'true',
+    )
+    assert.deepEqual(
+      [...processing.querySelectorAll('thead th')]
+        .slice(1)
+        .map((column) => column.textContent),
+      nexa.sheets.Chi_tiet.columns,
+    )
+
+    await render(pages[4])
+    const accounting = document.querySelector('.reference-accounting')
+    assert.ok(accounting)
+    const manualList = accounting.querySelector(
+      '[aria-label="Danh sách bút toán tay trong workbook"]',
+    )
+    const manualRows = [...manualList.querySelectorAll('tbody tr')]
+    assert.equal(manualRows.length, 15)
+    for (const manual of nexa.dashboard.manuals) {
+      const row = manualRows.find((entry) =>
+        entry.textContent.includes(manual.journalId),
+      )
+      assert.ok(row, `missing supplied manual journal ${manual.journalId}`)
+      assert.ok(row.querySelector(`td[title="${String(manual.revenueUSD)}"]`))
+    }
+    const priorityCases = nexa.exceptions.filter((row) =>
+      /chứng từ|evidence|chưa giải thích/i.test(
+        `${row.status} ${row.category}`,
+      ),
+    )
+    for (const exception of priorityCases) {
+      const link = accounting.querySelector(
+        `a[href="/exceptions?id=${encodeURIComponent(exception.id)}"]`,
+      )
+      assert.ok(link)
+      assert.match(link.textContent, new RegExp(exception.id))
+      assert.ok(
+        link.textContent.includes(exception.status),
+        'priority status remains the supplied unverified Excel status',
+      )
+    }
+    assert.doesNotMatch(
+      accounting.textContent,
+      /Mã tham chiếu chưa xác nhận đủ chứng từ/,
+    )
+    await click(document.querySelector('[aria-label="Thông tin trang"]'))
+    const accountingInformation = document.querySelector(
+      '.page-information-dialog',
+    )
+    assert.ok(accountingInformation)
+    assert.match(accountingInformation.textContent, /Bút toán tay và chứng từ/)
+    assert.match(
+      accountingInformation.textContent,
+      /Mã tham chiếu chưa xác nhận đủ chứng từ/,
+    )
+    await click(document.querySelector('[aria-label="Đóng thông tin trang"]'))
+    assert.equal(document.querySelector('.page-information-dialog'), null)
+
+    await render(pages[1])
+    const exceptionPage = document.querySelector('.reference-exceptions')
+    assert.ok(exceptionPage)
+    const exceptionRegion = exceptionPage.querySelector(
+      '[aria-label="Ngoại lệ tham chiếu Excel"]',
+    )
+    const exceptionRows = [...exceptionRegion.querySelectorAll('tbody tr')]
+    assert.equal(exceptionRows.length, 7)
+    assert.deepEqual(
+      exceptionRows.map((row) => row.querySelector('td button').textContent),
+      nexa.exceptions.map((row) => row.id),
+    )
+    assert.deepEqual(
+      exceptionRows.map(
+        (row) => row.querySelector('td:last-child').textContent,
+      ),
+      nexa.exceptions.map((row) => row.status),
+    )
+    assert.doesNotMatch(
+      exceptionPage.textContent,
+      /Nhật ký tham chiếu không xác nhận hoặc đóng/,
+    )
+    await click(document.querySelector('[aria-label="Thông tin trang"]'))
+    const exceptionInformation = document.querySelector(
+      '.page-information-dialog',
+    )
+    assert.ok(exceptionInformation)
+    assert.match(
+      exceptionInformation.textContent,
+      /Ngoại lệ Excel và hồ sơ Raw/,
+    )
+    assert.match(
+      exceptionInformation.textContent,
+      /Nhật ký tham chiếu không xác nhận hoặc đóng/,
+    )
+    assert.doesNotMatch(
+      exceptionInformation.textContent,
+      /Bút toán tay và chứng từ/,
+    )
+    assert.doesNotMatch(
+      exceptionInformation.textContent,
+      /Mã tham chiếu chưa xác nhận đủ chứng từ/,
+    )
+    await click(document.querySelector('[aria-label="Đóng thông tin trang"]'))
+    const exceptionSearch = exceptionPage.querySelector('input[type="search"]')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        dom.window.HTMLInputElement.prototype,
+        'value',
+      ).set.call(exceptionSearch, 'EX-05')
+      exceptionSearch.dispatchEvent(
+        new dom.window.Event('input', { bubbles: true }),
+      )
+    })
+    assert.equal(exceptionRegion.querySelectorAll('tbody tr').length, 1)
+    assert.equal(
+      exceptionRegion.querySelector('tbody tr td button').textContent,
+      'EX-05',
+    )
+    assert.ok(
+      exceptionRegion.textContent.includes(
+        nexa.exceptions.find((row) => row.id === 'EX-05').status,
+      ),
+    )
+    assert.equal(rawRuns, runsBeforeFiltering)
+    // Verify the actual application chrome, not only isolated result pages.
+    await act(async () => {
+      root.render(
+        h(
+          MemoryRouter,
+          { initialEntries: ['/processing'] },
+          h(
+            AppStoreContext.Provider,
+            { value: store },
+            h(
+              GuideWorkspace,
+              null,
+              h(
+                Routes,
+                null,
+                h(
+                  Route,
+                  { element: h(AppLayout) },
+                  h(Route, {
+                    path: '/processing',
+                    element: h(pages[2].component),
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ),
+      )
+    })
+    assert.equal(document.querySelector('.excel-source-banner'), null)
+    assert.ok(
+      document.querySelector(
+        '.app-main.app-compact-workspace .reference-processing',
+      ),
+    )
+    assert.ok(
+      document.querySelector(
+        '.app-header [aria-label="Workbook Excel đang xem"]',
+      ),
+    )
+    assert.equal(
+      document.querySelectorAll('[aria-label="Thông tin trang"]').length,
+      1,
+    )
+    assert.doesNotMatch(
+      document.querySelector('.app-main').textContent,
+      /WASM unavailable/,
+    )
+    await click(document.querySelector('[aria-label="Thông tin trang"]'))
+    const workspaceInformation = document.querySelector('[role="dialog"]')
+    assert.match(
+      workspaceInformation.textContent,
+      /Nexa_Home_Recon_Dataset_Final.xlsx/,
+    )
+    assert.match(workspaceInformation.textContent, /WASM unavailable/)
+    await click(document.querySelector('[aria-label="Đóng thông tin trang"]'))
+    await click(
+      document.querySelector(
+        '.app-header [aria-label="Tắt xem thử · Quay lại xử lý Raw"]',
+      ),
+    )
+    assert.equal(store.getState().excelReference.enabled, false)
+    assert.equal(
+      document.querySelector(
+        '.app-header [aria-label="Workbook Excel đang xem"]',
+      ),
+      null,
+    )
+    assert.match(
+      document.querySelector('.app-main').textContent,
+      /WASM unavailable/,
+    )
+    await render(pages[0])
+    assert.match(document.body.textContent, /RAW FLASH SENTINEL/)
+    assert.equal(store.getState().files, raw.files)
+    assert.equal(store.getState().runFailure, raw.runFailure)
+    assert.equal(store.getState().reviewCases, raw.reviewCases)
   } finally {
     if (root) {
       const { act } = await import('react')

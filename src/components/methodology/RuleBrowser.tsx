@@ -16,6 +16,7 @@ import {
   type RuleFilters,
 } from '@/lib/model-workspace'
 import type { RunEvidence } from '@/lib/reconciliation-evidence'
+import { InformationNote } from '@/components/PageInformation'
 
 export function RuleBrowser({
   filters,
@@ -159,13 +160,12 @@ export function RuleBrowser({
           </div>
         )}
       </div>
-      <footer className="mw-panel-footer">
-        <span>{vi('Definitions reflect the current implementation.')}</span>
-        <span className="mw-muted">
-          {' ' + vi('Select a rule to inspect') + ' '}
-          <ArrowUpRight size={12} />
-        </span>
-      </footer>
+      <InformationNote title="Danh mục quy tắc">
+        <p>
+          {vi('Definitions reflect the current implementation.')}{' '}
+          {vi('Select a rule to inspect')}
+        </p>
+      </InformationNote>
     </section>
   )
 }

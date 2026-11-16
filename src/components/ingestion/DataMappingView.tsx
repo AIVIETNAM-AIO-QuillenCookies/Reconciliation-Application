@@ -220,6 +220,7 @@ export function DataMappingView({
                     }}
                   >
                     <SelectTrigger
+                      data-tour={`mapping-${source}-${field.id}`}
                       id={controlId}
                       onFocus={() => setFocusedColumn(column ?? null)}
                       aria-invalid={invalid}
@@ -243,6 +244,7 @@ export function DataMappingView({
                       {preview.headers.map((header, columnIndex) => (
                         <SelectItem
                           key={columnIndex}
+                          data-tour={`mapping-option-${source}-${field.id}-${columnIndex}`}
                           value={`column-${columnIndex}`}
                           disabled={Object.entries(columns).some(
                             ([key, selected]) =>

@@ -1,24 +1,30 @@
 # Kiểm tra phát hành v1 — 13/11/2026
 
+## Đối chiếu tài liệu ngày 13/11/2026
+
+Lần rà soát tài liệu đối chiếu commit `ed969a42233dfe191e6aac054a156c73ce8e55fc` (`Release 1`, package `0.1.0`). Working tree sạch lúc bắt đầu; lần này chỉ sửa/thêm Markdown, không sửa code ứng dụng, giao diện hay quy tắc nghiệp vụ. Bản tổng hợp mới: [docs/RESEARCH_APPLICATION_MAP.md](docs/RESEARCH_APPLICATION_MAP.md).
+
+Đã chạy lại `npm.cmd test`: **227/227 đạt**, 0 fail, 0 skipped, khoảng 49 giây; `npm.cmd run typecheck`: exit 0 (Node 24.13.1/npm 11.8.0). Các kết quả cài đặt/build/lint/HTTP preview và mô tả sửa code bên dưới là **hồ sơ của lần chuẩn bị phát hành trước commit trên**, không phải thao tác được lặp lại trong đợt tài liệu hóa. Chưa chạy browser hoặc xác minh URL deploy trong đợt này. Kết quả kiểm tra liên kết/định dạng tài liệu được ghi tại bản đồ nghiên cứu.
+
 ## Kết luận
 
 **Mức 2 — Có thể đưa lên Vercel với các giới hạn đã nêu.** Không phát hiện lỗi chặn TypeScript, build hoặc kiểm thử tự động sau các sửa chữa bên dưới. Đã phục vụ và kiểm tra asset từ bản production `dist` bằng Vite preview. **Chưa xác minh triển khai Vercel thực tế hoặc thao tác trong trình duyệt production:** chưa có URL deploy, CUA trả inventory trình duyệt rỗng và `Browser is not available: iab` khi thử mở tab. Vì vậy không đánh dấu visual/mobile, Network/Console hay luồng UI production là đạt.
 
 GitHub public cần rà soát **lịch sử commit cũ** chứa audit nguồn trước khi push; dọn index hiện tại không loại dữ liệu khỏi lịch sử. Workbook demo được xác nhận công khai riêng như mô tả bên dưới.
 
-## Khảo sát và thay đổi
+## Khảo sát và thay đổi trong lần chuẩn bị phát hành
 
 - React 19 + TypeScript + Vite 8, Tailwind 4, React Router HashRouter; npm với lockfile v3. Không có hướng dẫn AGENTS.md được tìm thấy trong repo/các thư mục cha đã kiểm tra. Working tree sạch khi bắt đầu; không reset repo.
 - Chốt `engines.node: 24.x`, `.nvmrc: 24` để local, CI và Vercel dùng cùng major đã kiểm tra (Node 24.13.1, npm 11.8.0). Không nâng dependencies; lockfile chỉ đổi metadata engine của package gốc.
 - **Sửa engine chờ vô hạn khi Worker DuckDB lỗi:** thư viện xóa pending RPC nhưng không reject. `src/lib/duckdb.ts` nay nhận `error`/`messageerror` trong instantiate/open, hủy Worker thất bại, reset singleton và cho retry. Thành công vẫn chia sẻ một engine qua các consumer/điều hướng.
 - **Sửa yêu cầu chứng từ trùng và trạng thái bằng chứng cũ:** yêu cầu đang chờ được dùng lại khi bấm thêm, không thêm history/ghi đè ghi chú và bước tiếp theo. Yêu cầu mới xóa `evidenceReviewed`; hồ sơ đã rà soát rồi mở lại vẫn yêu cầu mới được. UI báo đúng số yêu cầu mới hoặc trạng thái đang chờ. Không gửi email/tin nhắn.
 - Thêm `typecheck`, `test:production` và script HTTP production nhỏ; CI Ubuntu/Node 24 chạy cài lockfile, lint, tests, build, HTTP production và format. Không thêm framework test mới.
-- README được rút gọn thành hướng dẫn vận hành/deploy; snapshot kiến trúc cũ giữ nguyên nội dung ở `ARCHITECTURE.md`. Ghi rõ demo công khai trong tài liệu tham chiếu Excel.
-- Bổ sung ignore cho env/credentials, Vercel local state, npm cache, audit/tạm, uploads/reports. Bỏ theo dõi **29 file** trong `outputs/` và `.tmp-vi/` bằng `git rm --cached`, giữ nguyên file trên máy. Các xóa khỏi index này đang staged; thay đổi source/tài liệu vẫn cần được add/commit cùng bản phát hành.
+- README được rút gọn thành hướng dẫn vận hành/deploy; nội dung bàn giao kiến trúc được chuyển sang `ARCHITECTURE.md`, sau đó được đối chiếu lại trong lần tài liệu hóa này. Ghi rõ demo công khai trong tài liệu tham chiếu Excel.
+- Bổ sung ignore cho env/credentials, Vercel local state, npm cache, audit/tạm, uploads/reports. Hồ sơ phát hành ghi nhận bỏ theo dõi **29 file** trong `outputs/` và `.tmp-vi/` bằng `git rm --cached`, giữ nguyên file trên máy. Đây là thao tác lịch sử đã thuộc bản `Release 1`; không còn là các xóa đang staged khi bắt đầu rà soát tài liệu.
 
 ## Lệnh và bằng chứng
 
-Các kết quả sau chạy trên Windows PowerShell sau khi sửa. Dùng `npm.cmd` để tránh chính sách thực thi wrapper `.ps1`.
+Các kết quả sau được lưu từ lần chuẩn bị phát hành trên Windows PowerShell sau khi sửa code. Chỉ những lệnh nêu ở phần đối chiếu đầu file được chạy lại trong đợt tài liệu hóa. Dùng `npm.cmd` để tránh chính sách thực thi wrapper `.ps1`.
 
 | Lệnh/kiểm tra                                                                                | Kết quả                                                                                                                                                                                                                      |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -85,7 +91,7 @@ HashRouter giữ nguyên. Dùng `https://<domain>/#/processing?sheet=...`; hash/
 
 ## Việc người triển khai làm tiếp
 
-1. Rà `git diff` và `git diff --cached`; các xóa audit/tạm là bỏ theo dõi, file local còn nguyên. Chốt quyền công khai lịch sử cũ hoặc dùng GitHub private, rồi add/commit toàn bộ thay đổi phát hành và push. Chưa push/commit/deploy tự động trong phiên này.
+1. Rà `git diff` và `git diff --cached` của thay đổi tài liệu hiện tại. Việc bỏ theo dõi audit/tạm đã thuộc commit phát hành; không lặp lại thao tác đó. Các bước push/công khai repo/deploy tiếp theo cần được người triển khai thực hiện và ghi nhận kết quả; đợt tài liệu hóa không thực hiện các bước này.
 2. Kiểm tra workflow CI xanh trên GitHub. Import repo vào Vercel với cấu hình trên và deploy.
 3. Trên URL HTTPS mới, mở root và trực tiếp `/#/processing`, `/#/exceptions?...`, refresh từng trang khi chưa có dữ liệu. Xác nhận empty state và engine chỉ báo sẵn sàng khi khởi tạo xong.
 4. Mở DevTools Network/Console: xác nhận Worker/JS/WASM HTTP 200 đúng MIME, không HTML/404/CORS, không uncaught exception; WASM/Worker cùng origin. Giả lập chặn Worker để thử banner và retry, sau đó bỏ chặn.

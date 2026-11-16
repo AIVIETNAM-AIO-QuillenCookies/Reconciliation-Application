@@ -439,12 +439,14 @@ export function ExceptionLog({
                 return (
                   <Fragment key={row.id}>
                     <tr
+                      data-tour={`exception-row-${row.id}`}
                       className={
                         expanded === row.id ? 'is-selected' : undefined
                       }
                     >
                       <td className="exception-issue-cell">
                         <button
+                          data-tour={`exception-open-${row.id}`}
                           className="exception-issue-button"
                           aria-label={`Xem chi tiết ${row.reference}`}
                           aria-expanded={expanded === row.id}
@@ -537,6 +539,8 @@ export function ExceptionLog({
                         <td colSpan={6}>
                           <div
                             id={`${instanceId}-${row.id}`}
+                            data-tour="exception-detail"
+                            data-exception-id={row.id}
                             className="exception-detail"
                           >
                             <LocalizedNote message={row.description} />

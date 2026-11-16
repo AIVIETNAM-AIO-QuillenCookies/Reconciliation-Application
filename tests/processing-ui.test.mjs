@@ -105,6 +105,8 @@ test('processing UI supports step review, join remediation, reopen, exact-run ta
     const { DataProcessing } = await server.ssrLoadModule(
       '/src/pages/DataProcessing.tsx',
     )
+    const { PageInformationProvider, PageInformationButton } =
+      await server.ssrLoadModule('/src/components/PageInformation.tsx')
     const { MasterDataConfigurator } = await server.ssrLoadModule(
       '/src/components/ingestion/MasterDataConfigurator.tsx',
     )
@@ -117,9 +119,21 @@ test('processing UI supports step review, join remediation, reopen, exact-run ta
       act(async () => {
         root.render(
           h(
-            MemoryRouter,
-            { key: path, initialEntries: [path] },
-            h(AppStoreContext.Provider, { value: store }, component),
+            PageInformationProvider,
+            null,
+            h(
+              MemoryRouter,
+              { key: path, initialEntries: [path] },
+              h(
+                AppStoreContext.Provider,
+                { value: store },
+                h(PageInformationButton, {
+                  page: 'Xử lý dữ liệu',
+                  scope: path,
+                }),
+                component,
+              ),
+            ),
           ),
         )
       })
@@ -525,12 +539,20 @@ test('processing UI supports step review, join remediation, reopen, exact-run ta
           h(DataProcessing),
           '/processing?run=ui-run&table=expected_events',
         )
-        assert.match(document.body.textContent, /50 dòng mỗi bảng/)
+        assert.doesNotMatch(document.body.textContent, /50 dòng mỗi bảng/)
+        await click(document.querySelector('[aria-label="Thông tin trang"]'))
+        assert.match(
+          document.querySelector('[role="dialog"]').textContent,
+          /50 dòng mỗi bảng/,
+        )
+        await click(
+          document.querySelector('[aria-label="Đóng thông tin trang"]'),
+        )
         assert.ok(document.querySelector('[data-pos-diagnostics="ui-run"]'))
         assert.match(document.body.textContent, /Dòng lỗi duy nhất0/)
         assert.match(
           document.querySelector('.processing-table-tree').textContent,
-          /80 dòng · 1 dòng đã giữ/,
+          /80 dòng/,
         )
         await click(document.querySelector('.mw-row-number button'))
         assert.match(

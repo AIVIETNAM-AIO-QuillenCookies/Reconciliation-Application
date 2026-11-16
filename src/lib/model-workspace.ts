@@ -8,7 +8,8 @@ import {
 import type { EvidenceTable, RunEvidence } from './reconciliation-evidence.ts'
 
 /** Presentation only. Nothing in this module is consumed by the accounting pipeline. */
-export type WorkspaceTab = 'pipeline' | 'sources' | 'evidence' | 'rules'
+export type WorkspaceTab =
+  'document' | 'pipeline' | 'sources' | 'evidence' | 'rules'
 export type WorkspaceSelection =
   | { kind: 'node' | 'connection' | 'rule'; id: string }
   | {

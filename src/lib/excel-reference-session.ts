@@ -1,6 +1,7 @@
 import {
   parseExcelReference,
   type ExcelReferenceWorkbook,
+  type ReferenceParseOptions,
 } from './excel-reference.ts'
 import type {
   ReconciliationPeriod,
@@ -8,12 +9,21 @@ import type {
 } from './reconciliation-types.ts'
 import type { ReconciliationException } from './exceptions.ts'
 
-export const REFERENCE_FILE_NAME = 'bang-cau-noi&nhat-ki-ngoai-le (1).xlsx'
+export const REFERENCE_FILE_NAME = 'Nexa_Home_Recon_Dataset_Final.xlsx'
+
+/**
+ * Asks open screens (e.g. unsaved accounting review edits) whether the Excel
+ * reference may replace the visible result. A listener cancels the event to block.
+ */
+export const allowReferenceSwitch = () =>
+  window.dispatchEvent(
+    new Event('reconcile:before-reference', { cancelable: true }),
+  )
 export const REFERENCE_STEPS = [
   'Đọc workbook tham chiếu',
   'Kiểm tra cấu trúc và số liệu',
-  'Chuẩn bị cầu nối, ngoại lệ và chi tiết',
-  'Hiển thị dashboard',
+  'Chuẩn bị đối soát, hoàn trả và chất lượng',
+  'Hiển thị đủ 4 dashboard',
 ] as const
 export interface ExcelReferenceState {
   enabled: boolean
@@ -84,7 +94,10 @@ export function createExcelReferenceController(
       controller = null
       publish(emptyExcelReference())
     },
-    async loadExcelReference(file?: Pick<File, 'name' | 'arrayBuffer'>) {
+    async loadExcelReference(
+      file?: Pick<File, 'name' | 'arrayBuffer'>,
+      options?: ReferenceParseOptions,
+    ) {
       const version = ++generation
       controller?.abort()
       const active = new AbortController()
@@ -105,7 +118,7 @@ export function createExcelReferenceController(
             (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env
               ?.BASE_URL ?? '/'
           const response = await fetch(
-            `${base}reference/excel-reference.xlsx`,
+            `${base}demo/Nexa_Home_Recon_Dataset_Final.xlsx`,
             { signal: active.signal },
           )
           if (!response.ok)
@@ -124,6 +137,7 @@ export function createExcelReferenceController(
                 step: stage === 'read' ? 0 : stage === 'validate' ? 1 : 2,
               })
           },
+          options,
         )
         if (!current()) return
         const first = workbook.months[0]
@@ -141,7 +155,7 @@ export function createExcelReferenceController(
           step: 4,
           period: { start: `${first}-01`, end },
           counts: [
-            3,
+            3 + (workbook.dashboard?.sourceSheets.length ?? 0),
             workbook.checks.length,
             workbook.bridgeRows.length +
               workbook.exceptions.length +

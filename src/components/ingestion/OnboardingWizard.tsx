@@ -75,6 +75,7 @@ export function OnboardingWizard() {
     setColumnMapping,
     setGLAmountBasis,
     setHeaderRow,
+    setSheetName,
     masterFocusRequest,
     processingPanelOpen,
   } = useAppStore()
@@ -136,6 +137,7 @@ export function OnboardingWizard() {
             controller.signal,
             source === 'Dim' ? 'dim' : 'first',
             entry.headerRow ?? 1,
+            entry.sheetName,
           )
           if (!controller.signal.aborted)
             setFilePreview(
@@ -187,7 +189,11 @@ export function OnboardingWizard() {
     }
     const remaining = files.filter((entry) => entry.id !== file?.id)
     if (
-      remaining.some((entry) => fileKey(entry.file) === fileKey(incomingFile))
+      remaining.some(
+        (entry) =>
+          entry.source === source &&
+          fileKey(entry.file) === fileKey(incomingFile),
+      )
     ) {
       setError(
         vi('This file is already selected. Choose the export for this source.'),
@@ -260,6 +266,7 @@ export function OnboardingWizard() {
       }}
     >
       <DialogContent
+        data-tour="onboarding-dialog"
         className="import-wizard"
         onOpenAutoFocus={(event) => {
           returnFocusRef.current =
@@ -317,6 +324,7 @@ export function OnboardingWizard() {
                 return (
                   <li key={item.source}>
                     <button
+                      data-tour={`onboarding-source-${item.source}`}
                       type="button"
                       onClick={() => openSourceOnboarding(item.source)}
                       aria-current={index === step ? 'step' : undefined}
@@ -629,6 +637,41 @@ export function OnboardingWizard() {
                     )}
                     {/* Sibling panels need distinct identities as warnings appear and disappear. */}
                     {source !== 'Dim' && (
+                      <label className="block rounded-lg border bg-white p-3 text-xs">
+                        <span className="mb-2 block font-medium">
+                          Sheet nguồn · {source}
+                        </span>
+                        <select
+                          data-tour={`source-sheet-${source}`}
+                          aria-label={`Sheet nguồn ${source}`}
+                          className="block w-full rounded-md border bg-white p-2 text-xs"
+                          value={
+                            file.sheetName ?? draft?.preview?.sheetName ?? ''
+                          }
+                          onChange={(event) =>
+                            setSheetName(file.id, event.target.value)
+                          }
+                          disabled={!draft?.preview?.sheetNames?.length}
+                        >
+                          {(
+                            draft?.preview?.sheetNames ?? [
+                              file.sheetName ?? draft?.preview?.sheetName ?? '',
+                            ]
+                          ).map((name) => (
+                            <option key={name} value={name}>
+                              {name || 'CSV · không có worksheet'}
+                            </option>
+                          ))}
+                        </select>
+                        {file.sample && (
+                          <span className="mt-2 block text-muted-foreground">
+                            Preset Nexa Home · bạn vẫn có thể chọn sheet và cột
+                            khác.
+                          </span>
+                        )}
+                      </label>
+                    )}
+                    {source !== 'Dim' && (
                       <HeaderRowSelector
                         key={`header-row:${file.id}`}
                         value={file.headerRow ?? 1}
@@ -746,6 +789,7 @@ export function OnboardingWizard() {
               {final && file && (
                 <Button
                   type="submit"
+                  data-tour="master-validate"
                   form="master-configuration-form"
                   variant="outline"
                   className="h-9 text-xs"
@@ -773,6 +817,7 @@ export function OnboardingWizard() {
               )}
             </div>
             <Button
+              data-tour={final ? 'onboarding-run' : 'onboarding-next'}
               className="wizard-footer-next h-9 gap-2 text-xs"
               disabled={
                 final

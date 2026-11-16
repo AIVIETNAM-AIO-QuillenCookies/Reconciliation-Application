@@ -1,6 +1,10 @@
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm'
 import type { QueuedFile, Source } from './uploads.ts'
 import { sourceRecordRows } from './source-coordinates.ts'
+import {
+  quoteIdentifier as quote,
+  quoteLiteral as literal,
+} from './sql-quoting.ts'
 
 export interface PosDiagnosticSample {
   sourceFile: string
@@ -53,8 +57,6 @@ export class PosValidationError extends Error {
     this.diagnostics = diagnostics
   }
 }
-const quote = (text: string) => `"${text.replaceAll('"', '""')}"`
-const literal = (text: string) => `'${text.replaceAll("'", "''")}'`
 
 /** Full-table counts and bounded original records, from the same run connection. */
 export async function capturePosDiagnostics(
@@ -141,7 +143,10 @@ export async function capturePosDiagnostics(
       )
     }
     if (file && !coordinates.has(path))
-      coordinates.set(path, sourceRecordRows(file.file, file.headerRow ?? 1))
+      coordinates.set(
+        path,
+        sourceRecordRows(file.file, file.headerRow ?? 1, file.sheetName),
+      )
     const sourceRows = await coordinates.get(path)
     return {
       sourceFile: file?.file.name ?? fileId ?? '',

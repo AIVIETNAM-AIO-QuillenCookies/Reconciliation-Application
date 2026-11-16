@@ -147,9 +147,15 @@ export interface DashboardModel {
     validations: {
       id: string
       label: string
-      count: number
+      count: number | null
       status: string
       tableId: string
+      actual?: unknown
+      expected?: unknown
+      rule?: string
+      note?: string
+      sourceSheet?: string
+      sourceRow?: number
     }[]
   }
 }
@@ -197,15 +203,19 @@ export function safeDashboardRatio(
     ? null
     : numerator / denominator
 }
+/** Store-month flag: |Δ| > 200 USD AND |Δ| / |GL| > 1 %, both strict. */
+export const STORE_MONTH_THRESHOLD_CENTS = 20_000
+export const STORE_MONTH_THRESHOLD_PERCENT = 1
 export function storeMonthBreaches(deltaUSD: number, glUSD: number): boolean {
   const deltaCents = Math.round(deltaUSD * 100)
   const glCents = Math.round(glUSD * 100)
   return (
     Number.isSafeInteger(deltaCents) &&
     Number.isSafeInteger(glCents) &&
-    Math.abs(deltaCents) > 20_000 &&
+    Math.abs(deltaCents) > STORE_MONTH_THRESHOLD_CENTS &&
     glCents !== 0 &&
-    BigInt(Math.abs(deltaCents)) * 100n > BigInt(Math.abs(glCents))
+    BigInt(Math.abs(deltaCents)) * 100n >
+      BigInt(Math.abs(glCents)) * BigInt(STORE_MONTH_THRESHOLD_PERCENT)
   )
 }
 export function dashboardMonths(period: ReconciliationPeriod): string[] {
@@ -438,7 +448,9 @@ export function buildDashboardModel({
   if (source === 'excel' && workbook) {
     model.available = true
     model.filterNotes.push(
-      'Excel tham chiếu chỉ có cầu nối theo tháng; chưa có phân bổ kênh hoặc quốc gia đáng tin cậy.',
+      workbook.dashboard
+        ? 'Excel: cầu nối giữ nguyên kết quả workbook; chi tiết, kênh và chất lượng lấy từ các sheet chuẩn hóa và QC_Summary. Quốc gia chưa được phân bổ cho đối soát chi tiết.'
+        : 'Excel tham chiếu chỉ có cầu nối theo tháng; chưa có phân bổ kênh hoặc quốc gia đáng tin cậy.',
     )
     const rows = workbook.bridgeRows.filter(
       (row) =>
@@ -470,8 +482,11 @@ export function buildDashboardModel({
       sourceRows: [
         {
           fileName: workbook.fileName,
-          sheetName: 'Cau_noi',
-          sourceRow: row.sourceRow,
+          sheetName: String(row.values.Source_Sheet ?? 'Cau_noi'),
+          sourceRow:
+            typeof row.values.Source_Row === 'number'
+              ? row.values.Source_Row
+              : row.sourceRow,
           month: selectedMonths.join(' → '),
           transactionId: '',
           amountUSD: sumMonthly(row.monthly),
@@ -485,8 +500,11 @@ export function buildDashboardModel({
           .slice(0, 199)
           .map((detail) => ({
             fileName: workbook.fileName,
-            sheetName: 'Chi_tiet',
-            sourceRow: detail.sourceRow,
+            sheetName: String(detail.values.Source_Sheet ?? 'Chi_tiet'),
+            sourceRow:
+              typeof detail.values.Source_Row === 'number'
+                ? detail.values.Source_Row
+                : detail.sourceRow,
             month: detail.month,
             transactionId: detail.transactionId,
             amountUSD: detail.usd,
@@ -583,6 +601,80 @@ export function buildDashboardModel({
             : null,
       })),
       validations: [],
+    }
+    const dashboard = workbook.dashboard
+    if (dashboard) {
+      model.channels = ['ALL', 'STORE', 'WEB', 'UNALLOCATED']
+      populateDetail(model, [], dashboard, matches, filters.channel)
+      model.detail.reason = dashboard.rules.join(' ')
+      const includeWeb = filters.channel === 'ALL' || filters.channel === 'WEB'
+      const includeStore =
+        filters.channel === 'ALL' || filters.channel === 'STORE'
+      const quality = dashboard.quality
+        .filter((row) => selected.has(row.month))
+        .map((row) => ({
+          ...row,
+          returnsUSD: includeWeb ? row.returnsUSD : null,
+          deliveredUSD: includeWeb ? row.deliveredUSD : null,
+          returnRate: includeWeb ? row.returnRate : null,
+          cancelledOrders: includeWeb ? row.cancelledOrders : null,
+          removedDuplicateLines: includeStore
+            ? row.removedDuplicateLines
+            : null,
+        }))
+      const metric = (key: keyof Omit<DashboardQualityMonth, 'month'>) =>
+        quality.every((row) => row[key] !== null)
+          ? sum(quality.map((row) => row[key] ?? 0))
+          : null
+      const returnsUSD = metric('returnsUSD')
+      const deliveredUSD = metric('deliveredUSD')
+      model.quality = {
+        available: true,
+        reason:
+          'Excel · theo quy tắc báo cáo: hàng trả tại ngày trả / đơn đã giao tại ngày giao, dùng net_usd_daily. Đơn hủy theo ngày đặt; POS trùng chỉ đếm export_seq > 1. QC_Summary giữ nguyên kết quả toàn workbook, không lọc theo tháng hoặc kênh; ô chưa đánh giá không được coi là đạt.',
+        returnsUSD,
+        deliveredUSD,
+        returnRate: safeDashboardRatio(returnsUSD, deliveredUSD),
+        cancelledOrders: metric('cancelledOrders'),
+        removedDuplicateLines: metric('removedDuplicateLines'),
+        monthly: quality,
+        validations: dashboard.validations.map((row) => ({
+          ...row,
+          status: row.status || 'Chưa đánh giá',
+        })),
+      }
+      model.matrix = (['STORE', 'WEB', 'UNALLOCATED'] as const)
+        .filter(
+          (channel) => filters.channel === 'ALL' || channel === filters.channel,
+        )
+        .flatMap((channel) =>
+          (['flash', 'gl'] as const)
+            .filter((kind) => channel !== 'UNALLOCATED' || kind === 'gl')
+            .map((kind) => {
+              const rows =
+                kind === 'flash'
+                  ? dashboard.flashChannels
+                  : dashboard.glChannels
+              const monthly = Object.fromEntries(
+                months.map((month) => [
+                  month,
+                  sum(
+                    rows
+                      .filter(
+                        (row) => row.channel === channel && row.month === month,
+                      )
+                      .map((row) => row.revenueUSD),
+                  ),
+                ]),
+              )
+              return {
+                id: `${kind}-${channel}`,
+                label: `${kind === 'flash' ? 'Sales Flash' : 'GL'} · ${channel === 'STORE' ? 'Cửa hàng' : channel === 'WEB' ? 'Online' : 'Chưa phân bổ'}`,
+                monthly,
+                totalUSD: sum(selectedMonths.map((month) => monthly[month])),
+              }
+            }),
+        )
     }
   } else if (result) {
     model.available = true
@@ -751,7 +843,13 @@ export function buildDashboardModel({
           month: row.month,
         }
       })
-      populateRawDetail(model, result, snapshot, matches, filters.channel)
+      populateDetail(
+        model,
+        result.exceptions,
+        snapshot,
+        matches,
+        filters.channel,
+      )
       const quality = snapshot.quality
         .filter((row) => selected.has(row.month))
         .map((row) => ({ ...row }))
@@ -906,33 +1004,56 @@ export function buildDashboardModel({
     }
   }
   if (filters.channel !== 'ALL') {
-    if (source === 'raw' && result?.dashboard) {
+    const channelSnapshot =
+      source === 'raw' ? result?.dashboard : workbook?.dashboard
+    const flashByChannel =
+      source === 'excel' && filters.channel !== 'UNALLOCATED'
+        ? workbook?.dashboard?.flashChannels
+        : undefined
+    const channelFlash = (month: string) =>
+      flashByChannel
+        ? sum(
+            flashByChannel
+              .filter(
+                (row) => row.channel === filters.channel && row.month === month,
+              )
+              .map((row) => row.revenueUSD),
+          )
+        : null
+    if (channelSnapshot) {
       model.totals.glUSD = sum(
-        result.dashboard.glChannels
+        channelSnapshot.glChannels
           .filter(
             (row) => row.channel === filters.channel && selected.has(row.month),
           )
           .map((row) => row.revenueUSD),
       )
-      model.monthly = model.monthly.map((row) => ({
-        ...row,
-        flashUSD: null,
-        glUSD: sum(
-          result
-            .dashboard!.glChannels.filter(
+      model.monthly = model.monthly.map((row) => {
+        const flashUSD = channelFlash(row.month)
+        const glUSD = sum(
+          channelSnapshot.glChannels
+            .filter(
               (item) =>
                 item.channel === filters.channel && item.month === row.month,
             )
             .map((item) => item.revenueUSD),
-        ),
-        deltaUSD: null,
-        deltaRatio: null,
-        rulesUSD: null,
-        dataErrorsUSD: null,
-        unexplainedUSD: null,
-      }))
+        )
+        const deltaUSD = flashUSD === null ? null : glUSD - flashUSD
+        return {
+          ...row,
+          flashUSD,
+          glUSD,
+          deltaUSD,
+          deltaRatio: safeDashboardRatio(deltaUSD, flashUSD),
+          rulesUSD: null,
+          dataErrorsUSD: null,
+          unexplainedUSD: null,
+        }
+      })
     } else model.totals.glUSD = null
-    model.totals.flashUSD = null
+    model.totals.flashUSD = flashByChannel
+      ? sum(selectedMonths.map((month) => channelFlash(month)!))
+      : null
     model.totals.rulesUSD = null
     model.totals.dataErrorsUSD = null
     model.totals.unexplainedUSD = null
@@ -940,7 +1061,9 @@ export function buildDashboardModel({
     model.bridge = []
     model.checks = []
     model.filterNotes.push(
-      'Flash không có phân bổ kênh đã xác minh: chỉ GL và chi tiết có dữ liệu kênh được lọc; chênh lệch và cầu nối để trống.',
+      flashByChannel
+        ? 'Flash và GL theo kênh lấy từ sheet chuẩn hóa. Cầu nối điều chỉnh chỉ có tổng tất cả kênh nên không phân bổ cầu nối hoặc phần dư theo kênh.'
+        : 'Flash không có phân bổ kênh đã xác minh: chỉ GL và chi tiết có dữ liệu kênh được lọc; chênh lệch và cầu nối để trống.',
     )
   }
   if (filters.country && filters.country !== 'ALL') {
@@ -1077,10 +1200,10 @@ function monthFromBridge(
   }
 }
 
-function populateRawDetail(
+function populateDetail(
   model: DashboardModel,
-  result: ReconciliationResult,
-  snapshot: DashboardSnapshot,
+  exceptions: ReconciliationResult['exceptions'],
+  snapshot: Pick<DashboardSnapshot, 'cells' | 'online'>,
   matches: (month: string) => boolean,
   channel: DashboardChannel,
 ) {
@@ -1127,7 +1250,7 @@ function populateRawDetail(
   const values = [...storeMonths.values()]
   const storeKeys = [...new Set(values.map((row) => row.storeKey))]
   const exceptionIds = (storeKey: string, date?: string) =>
-    result.exceptions
+    exceptions
       .filter(
         (row) =>
           row.storeKey === storeKey &&

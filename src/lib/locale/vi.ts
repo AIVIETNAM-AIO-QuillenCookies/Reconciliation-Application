@@ -406,6 +406,7 @@ export const VI: Record<string, string> = {
   'Next Step': 'Bước tiếp theo',
   Overview: 'Tổng quan',
   'Rules & Data Model': 'Quy tắc & Mô hình dữ liệu',
+  'Convention document': 'Tài liệu quy ước',
   Settings: 'Cài đặt',
   'Reconcile home': 'Trang chủ reconcile.',
   'Finance workspace': 'Không gian kế toán',

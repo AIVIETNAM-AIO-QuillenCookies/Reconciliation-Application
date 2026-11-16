@@ -17,14 +17,10 @@ import { useAppStore } from '@/lib/store'
 import {
   REFERENCE_FILE_NAME,
   REFERENCE_STEPS,
+  allowReferenceSwitch,
 } from '@/lib/excel-reference-session'
 import { explainError } from '@/lib/i18n'
 import '@/excel-reference-controls.css'
-
-const allowReferenceSwitch = () =>
-  window.dispatchEvent(
-    new Event('reconcile:before-reference', { cancelable: true }),
-  )
 
 export function ExcelReferenceButton({
   compact = false,
@@ -237,6 +233,14 @@ export function ExcelReferenceDialog() {
                 dịch, mã khoản và dòng nguồn. Sheet Nhat_ky_ngoai_le: trạng thái
                 ngoại lệ theo workbook.
               </p>
+              {workbook.dashboard && (
+                <p>
+                  Đủ 4 dashboard: Tổng quan, Cầu nối chênh lệch, Đối soát chi
+                  tiết, Hoàn trả & chất lượng. Chi tiết lấy từ các sheet POS,
+                  WEB, GL và Flash chuẩn hóa; bảng chất lượng lấy từ QC_Summary.
+                  Ô chưa có đánh giá được giữ nguyên để bổ sung sau.
+                </p>
+              )}
               <p>
                 Δ = GL − Sales Flash; Δ% = Δ / Sales Flash. Giá trị USD giữ theo
                 workbook, cộng trước khi làm tròn để hiển thị; không quy đổi FX

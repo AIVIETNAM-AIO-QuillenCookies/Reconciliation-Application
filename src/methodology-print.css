@@ -44,6 +44,20 @@
   .mw-workspace > :not(.mw-print-document) {
     display: none !important;
   }
+  /* On the document tab, print the conventions document instead. */
+  .mw-workspace[data-tab='document'] > .mw-print-document {
+    display: none !important;
+  }
+  .mw-workspace[data-tab='document'] > .mw-workspace-body,
+  .mw-workspace[data-tab='document'] .mw-main-panel {
+    display: block !important;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+  }
+  .mw-workspace[data-tab='document'] .mw-inspector {
+    display: none !important;
+  }
   .mw-print-document {
     display: block !important;
     font-family: 'Segoe UI', Arial, sans-serif;

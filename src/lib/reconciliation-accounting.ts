@@ -7,9 +7,13 @@ import {
   type ColumnMapping,
   type MappingFieldId,
 } from './data-mapping.ts'
+import {
+  quoteIdentifier as quote,
+  quoteLiteral as literal,
+} from './sql-quoting.ts'
 
-export const quote = (value: string) => `"${value.replaceAll('"', '""')}"`
-const literal = (value: string) => `'${value.replaceAll("'", "''")}'`
+// `quote` remains part of this module's public API for existing importers.
+export { quote }
 const folded = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
 export const findColumn = (columns: readonly string[], names: string[]) =>
   names
@@ -294,6 +298,21 @@ export function accountingProjection(
     fields.gross_usd_daily = gross ?? `(${net} + ${fields.discount_usd_daily})`
     fields.net_usd_month_end =
       net ?? `(${gross} - ${fields.discount_usd_daily})`
+    // A currency column describes source money. Non-USD money needs an
+    // explicitly USD source field until WEB FX conversion is implemented.
+    const webCurrency = resolvedColumns.currency
+    const selectedMoney = [
+      grossColumn,
+      resolvedColumns.net_amount,
+      resolvedColumns.discount,
+    ].filter((column): column is string => !!column)
+    const needsWebFX = selectedMoney.some(
+      (column) => !folded(column).includes('usd'),
+    )
+    fields.__web_requires_fx =
+      webCurrency && needsWebFX
+        ? `COALESCE(UPPER(${value(webCurrency)}) NOT IN ('USD', ''), FALSE)`
+        : 'FALSE'
     if (!net)
       notes.push(
         'Net USD calculated as gross USD minus USD discount; no additional FX conversion applied.',
@@ -377,6 +396,23 @@ export function accountingProjection(
     )
   } else {
     fields.month_end_date = date('month_end_date', ['month_end_date_key'])
+    const periodColumn = resolvedColumns.date
+    if (
+      periodColumn &&
+      /^(thang|month|period|reportingmonth)$/.test(
+        periodColumn
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, ''),
+      )
+    ) {
+      fields.source_period = value(periodColumn)
+      fields.month_end_date = `last_day(${fields.month_end_date})`
+      notes.push(
+        `Flash reporting period ${periodColumn} is retained in source_period and resolved to that period's month end.`,
+      )
+    }
     fields.revenue_usd = amountSQL(
       required('revenue_usd', ['gross_usd', 'gross_usd_daily']),
     )

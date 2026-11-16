@@ -1553,3 +1553,14 @@
     transition: none !important;
   }
 }
+/* The conventions document is full width; it has no selectable objects. */
+.mw-workspace[data-tab='document'] .mw-workspace-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mw-workspace[data-tab='document'] :is(.mw-inspector, .mw-inspector-toggle) {
+  display: none;
+}
+.mw-workspace[data-tab='document']
+  .mw-small-button[aria-label='Print or save methodology as PDF'] {
+  display: none;
+}

@@ -15,13 +15,14 @@ scope.onmessage = (event) => {
     headerRow = 1,
     format = 'xlsx',
     selectedSheets,
+    sheetName,
   } = event.data
   const decode =
     mode === 'dim'
       ? workbookToSheets(buffer, undefined, headerRow, selectedSheets)
-      : workbookToCSV(buffer, undefined, headerRow, format).then((csv) => [
-          { name: 'source', csv },
-        ])
+      : workbookToCSV(buffer, undefined, headerRow, format, sheetName).then(
+          (csv) => [{ name: 'source', csv }],
+        )
   void decode
     .then((sheets) => {
       scope.postMessage({ sheets })

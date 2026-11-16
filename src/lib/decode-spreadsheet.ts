@@ -2,7 +2,8 @@ import type {
   DecodedSheet,
   SpreadsheetRequest,
   SpreadsheetResponse,
-} from './spreadsheet-types'
+} from './spreadsheet-types.ts'
+import { cachedWorkbook } from './workbook-cache.ts'
 
 /** A separate worker keeps XLSX decompression and parsing off the UI thread. */
 function decodeWorkbook(
@@ -12,6 +13,7 @@ function decodeWorkbook(
   headerRow = 1,
   format: 'csv' | 'xlsx' = 'xlsx',
   selectedSheets?: Record<string, { headerRow: number }>,
+  sheetName?: string,
 ): Promise<DecodedSheet[]> {
   signal?.throwIfAborted()
   return new Promise((resolve, reject) => {
@@ -45,6 +47,7 @@ function decodeWorkbook(
       headerRow,
       format,
       selectedSheets,
+      sheetName,
     }
     worker.postMessage(request, [buffer])
   })
@@ -55,9 +58,25 @@ export async function decodeSpreadsheet(
   signal?: AbortSignal,
   headerRow = 1,
   format: 'csv' | 'xlsx' = 'xlsx',
+  sheetName?: string,
+  file?: File,
 ): Promise<string> {
-  return (await decodeWorkbook(buffer, 'first', signal, headerRow, format))[0]
-    .csv
+  const workbook = cachedWorkbook(file)
+  if (workbook) {
+    const { workbookToCSV } = await import('./spreadsheet')
+    return workbookToCSV(buffer, signal, headerRow, format, sheetName, workbook)
+  }
+  return (
+    await decodeWorkbook(
+      buffer,
+      'first',
+      signal,
+      headerRow,
+      format,
+      undefined,
+      sheetName,
+    )
+  )[0].csv
 }
 
 export function decodeDimSpreadsheet(
@@ -65,7 +84,13 @@ export function decodeDimSpreadsheet(
   signal?: AbortSignal,
   headerRow = 1,
   selectedSheets?: Record<string, { headerRow: number }>,
+  file?: File,
 ): Promise<DecodedSheet[]> {
+  const workbook = cachedWorkbook(file)
+  if (workbook)
+    return import('./spreadsheet').then(({ workbookToSheets }) =>
+      workbookToSheets(buffer, signal, headerRow, selectedSheets, workbook),
+    )
   return decodeWorkbook(
     buffer,
     'dim',

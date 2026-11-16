@@ -1,15 +1,16 @@
 import { vi } from '@/lib/i18n'
 import {
   Network,
-  LockKeyhole,
   GitBranch,
   Table2,
   ListFilter,
   PanelRight,
   Files,
+  BookOpenText,
 } from 'lucide-react'
 import { modelNodes, methodologyRules } from '@/lib/methodology'
 import type { WorkspaceTab } from '@/lib/model-workspace'
+import { InformationNote } from '@/components/PageInformation'
 
 export function WorkspaceToolbar({
   tab,
@@ -27,6 +28,12 @@ export function WorkspaceToolbar({
   hasSelection: boolean
 }) {
   const tabs = [
+    {
+      id: 'document',
+      label: vi('Convention document'),
+      icon: BookOpenText,
+      count: null,
+    },
     {
       id: 'pipeline',
       label: vi('Pipeline'),
@@ -61,16 +68,13 @@ export function WorkspaceToolbar({
         <div>
           <div className="mw-heading-title">
             <h1>{vi('Rules & Data Model')}</h1>
-            <span className="mw-readonly">
-              <LockKeyhole size={11} />
-              {' ' + vi('Read only') + ' '}
-            </span>
           </div>
-          <p>{vi('Follow the data. Understand every rule.')}</p>
         </div>
-        <span className="mw-heading-note">
-          {vi('RECONCILIATION WORKSPACE')}
-        </span>
+        <InformationNote title="Quy tắc & mô hình dữ liệu">
+          <p>
+            {vi('Follow the data. Understand every rule.')} {vi('Read only')}.
+          </p>
+        </InformationNote>
       </header>
       <div className="mw-navigation">
         <div role="tablist" aria-label={vi('Model views')} className="mw-tabs">
@@ -110,12 +114,13 @@ export function WorkspaceToolbar({
             </button>
           ))}
         </div>
-        <span className="mw-navigation-note">
-          <i className={processing ? 'is-processing' : ''} />
-          {processing
-            ? vi('Processing current import')
-            : vi('Explore without changing your data')}
-        </span>
+        <InformationNote title="Chế độ xem mô hình">
+          <p>
+            {processing
+              ? vi('Processing current import')
+              : vi('Explore without changing your data')}
+          </p>
+        </InformationNote>
         <button
           type="button"
           className="mw-inspector-toggle"

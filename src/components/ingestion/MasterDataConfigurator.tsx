@@ -41,6 +41,7 @@ export function SearchSelect({
   onChange,
   placeholder = 'Chọn trang tính…',
   invalid = false,
+  tour,
 }: {
   label: string
   value: string
@@ -48,6 +49,7 @@ export function SearchSelect({
   onChange: (value: string) => void
   placeholder?: string
   invalid?: boolean
+  tour?: string
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -61,6 +63,7 @@ export function SearchSelect({
     >
       <Popover.Trigger asChild>
         <button
+          data-tour={tour}
           type="button"
           aria-label={label}
           aria-invalid={invalid || undefined}
@@ -126,6 +129,7 @@ export function SearchSelect({
               )
               .map((o) => (
                 <button
+                  data-tour={tour ? `${tour}-option-${o.value}` : undefined}
                   type="button"
                   key={o.value}
                   role="option"
@@ -476,6 +480,7 @@ export function MasterDataConfigurator({
             <button
               type="button"
               key={role}
+              data-tour={`master-role-${role}`}
               onClick={() => {
                 setActive(role)
                 setBrowseSheet('')
@@ -509,6 +514,7 @@ export function MasterDataConfigurator({
             <label className="space-y-1.5">
               <span className="font-medium">{ROLE_LABELS[active]}</span>
               <SearchSelect
+                tour={`master-usage-${active}`}
                 label={vt`${ROLE_LABELS[active]} usage`}
                 value={ref.usage}
                 options={[
@@ -527,6 +533,7 @@ export function MasterDataConfigurator({
             <label className="space-y-1.5">
               <span>{vi('Reference worksheet')}</span>
               <SearchSelect
+                tour={`master-sheet-${active}`}
                 label={vt`${ROLE_LABELS[active]} worksheet`}
                 invalid={ref.usage === 'enabled' && !ref.sheetName}
                 value={ref.sheetName}
@@ -555,6 +562,7 @@ export function MasterDataConfigurator({
               <button
                 type="button"
                 role="tab"
+                data-tour={`master-tab-${t}`}
                 aria-selected={tab === t}
                 key={t}
                 onClick={() => setTab(t)}
@@ -611,6 +619,7 @@ export function MasterDataConfigurator({
                         </p>
                       </div>
                       <SearchSelect
+                        tour={`master-column-${active}-${field.id}`}
                         label={vt`${ROLE_LABELS[active]} ${field.label} column`}
                         invalid={
                           required.has(field.id) && !ref.columns[field.id]
@@ -696,6 +705,7 @@ export function MasterDataConfigurator({
                   {ref.relationships.map((rel, index) => (
                     <div
                       key={rel.id}
+                      data-tour={`master-relation-${rel.id}`}
                       id={`master-relationship-${rel.id}`}
                       tabIndex={-1}
                       className={cn(
@@ -732,6 +742,7 @@ export function MasterDataConfigurator({
                         <label className="space-y-1">
                           <span>{vi('Source table')}</span>
                           <SearchSelect
+                            tour={`master-relation-${rel.id}-source`}
                             label={vt`Relationship ${index + 1} source`}
                             value={rel.source}
                             options={(
@@ -759,6 +770,7 @@ export function MasterDataConfigurator({
                           </p>
                           <div className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_85px_28px]">
                             <SearchSelect
+                              tour={`master-relation-${rel.id}-source-key-${keyIndex}`}
                               label={vt`Source key ${index + 1}.${keyIndex + 1}`}
                               value={key.sourceField}
                               options={[
@@ -786,6 +798,7 @@ export function MasterDataConfigurator({
                               }
                             />
                             <SearchSelect
+                              tour={`master-relation-${rel.id}-reference-key-${keyIndex}`}
                               label={vt`Reference key ${index + 1}.${keyIndex + 1}`}
                               value={key.referenceField}
                               options={REFERENCE_FIELDS[active].map((f) => ({
@@ -807,6 +820,7 @@ export function MasterDataConfigurator({
                               }
                             />
                             <SearchSelect
+                              tour={`master-relation-${rel.id}-key-type-${keyIndex}`}
                               label={vt`Key type ${index + 1}.${keyIndex + 1}`}
                               value={key.type}
                               options={['text', 'date', 'period'].map((t) => ({
@@ -872,6 +886,7 @@ export function MasterDataConfigurator({
                               className="flex items-center gap-1.5"
                             >
                               <input
+                                data-tour={`master-relation-${rel.id}-output-${field.id}`}
                                 type="checkbox"
                                 checked={rel.outputs.includes(field.id)}
                                 onChange={(e) =>
@@ -893,6 +908,7 @@ export function MasterDataConfigurator({
                         <label className="space-y-1">
                           <span>{vi('Lookup purpose')}</span>
                           <SearchSelect
+                            tour={`master-relation-${rel.id}-purpose`}
                             label={vt`Relationship ${index + 1} purpose`}
                             value={rel.purpose}
                             options={Object.entries(PURPOSE_LABELS)
@@ -916,6 +932,7 @@ export function MasterDataConfigurator({
                         <label className="space-y-1">
                           <span>{vi('When no match is found')}</span>
                           <SearchSelect
+                            tour={`master-relation-${rel.id}-unmatched`}
                             label={vt`Relationship ${index + 1} unmatched policy`}
                             value={rel.unmatched}
                             options={[

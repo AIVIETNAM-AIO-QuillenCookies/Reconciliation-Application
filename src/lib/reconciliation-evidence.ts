@@ -11,6 +11,10 @@ import {
   type MasterConfiguration,
   type JoinValidation,
 } from './master-data.ts'
+import {
+  quoteIdentifier as quote,
+  quoteLiteral as literal,
+} from './sql-quoting.ts'
 
 export type ProcessingPhase =
   | 'registering'
@@ -79,8 +83,6 @@ export interface RunEvidence {
   ruleApplications: EvidenceRuleApplication[]
 }
 export const EVIDENCE_PREVIEW_LIMIT = 50
-const quote = (text: string) => `"${text.replaceAll('"', '""')}"`
-const literal = (text: string) => `'${text.replaceAll("'", "''")}'`
 const metadata = new Set(['__reconcile_file_order', '__reconcile_row_order'])
 
 /** Read bounded output from the run's existing relations; never recalculate revenue in JavaScript. */

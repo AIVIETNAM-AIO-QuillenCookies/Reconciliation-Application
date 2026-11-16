@@ -278,6 +278,8 @@ export function ProgressView({
               <li key={step.id}>
                 <button
                   type="button"
+                  data-tour={`processing-step-${step.id}`}
+                  data-step-status={step.status}
                   className={cn(
                     'progress-step-button',
                     selected.id === step.id && 'is-selected',
@@ -297,6 +299,9 @@ export function ProgressView({
         </nav>
         <div
           className="progress-detail"
+          data-tour="processing-step-result"
+          data-step-id={selected.id}
+          data-step-status={selected.status}
           tabIndex={0}
           role="region"
           aria-label="Kết quả bước đang chọn"

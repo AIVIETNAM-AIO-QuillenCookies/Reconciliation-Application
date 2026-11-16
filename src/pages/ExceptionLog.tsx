@@ -6,6 +6,7 @@ import { CompatibilityNotice } from '@/components/CompatibilityNotice'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppStore } from '@/lib/store'
+import { InformationNote } from '@/components/PageInformation'
 import { ReferenceExceptions } from '@/components/excel-reference/ReferenceViews'
 import { AccountingExceptionCases } from '@/pages/AccountingReview'
 import '@/exceptions.css'
@@ -45,32 +46,26 @@ function RawExceptionLog() {
     <div className="exception-page">
       <header className="exception-page-heading">
         <div>
-          <p>ĐỐI SOÁT</p>
           <h1>Nhật ký ngoại lệ</h1>
         </div>
-        <div className="exception-heading-tools">
-          <span>
+        <InformationNote title="Cách đọc nhật ký ngoại lệ">
+          <p>
             {period.start} → {period.end}
-          </span>
-          <details className="exception-guide">
-            <summary>Cách đọc nhật ký</summary>
-            <div>
-              <p>
-                Hồ sơ kế toán dùng chung dữ liệu, bằng chứng và quyết định với
-                Rà soát kế toán. Một hồ sơ có thể liên quan nhiều bút toán.
-              </p>
-              <p>
-                Chênh lệch đối soát được tạo từ POS chuẩn hóa và so sánh nguồn
-                với GL theo cửa hàng/ngày. Chênh lệch = nguồn − GL. Các phần dư
-                tỷ giá hoặc độ phủ theo tháng nằm trên Dashboard.
-              </p>
-              <p>
-                Số tiền hồ sơ không được cộng thêm vào tổng rủi ro. Ngưỡng tiền
-                chỉ áp dụng cho chênh lệch đối soát.
-              </p>
-            </div>
-          </details>
-        </div>
+          </p>
+          <p>
+            Hồ sơ kế toán dùng chung dữ liệu, bằng chứng và quyết định với Rà
+            soát kế toán. Một hồ sơ có thể liên quan nhiều bút toán.
+          </p>
+          <p>
+            Chênh lệch đối soát được tạo từ POS chuẩn hóa và so sánh nguồn với
+            GL theo cửa hàng/ngày. Chênh lệch = nguồn − GL. Các phần dư tỷ giá
+            hoặc độ phủ theo tháng nằm trên Dashboard.
+          </p>
+          <p>
+            Số tiền hồ sơ không được cộng thêm vào tổng rủi ro. Ngưỡng tiền chỉ
+            áp dụng cho chênh lệch đối soát.
+          </p>
+        </InformationNote>
       </header>
       <ReconciliationRunStatus />
       <div className="exception-workspace">
@@ -184,16 +179,12 @@ function RawExceptionLog() {
           ) : status === 'ready' ? (
             <>
               {!!reconciliationData?.compatibilityWarnings?.length && (
-                <details className="exception-mapping-notes">
-                  <summary>
-                    Ghi chú cấu hình nguồn ·{' '}
-                    {reconciliationData.compatibilityWarnings.length}
-                  </summary>
+                <InformationNote title="Ghi chú cấu hình nguồn">
                   <CompatibilityNotice
                     warnings={reconciliationData.compatibilityWarnings}
                     preview={reconciliationData.schemaMode === 'compatible'}
                   />
-                </details>
+                </InformationNote>
               )}
               <ExceptionTable
                 key={`${period.start}:${period.end}`}

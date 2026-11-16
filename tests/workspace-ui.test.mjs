@@ -182,6 +182,8 @@ test('workspace source entry, completion gates, zero results and exception revie
       '/src/pages/DataIngestion.tsx',
     )
     const { Dashboard } = await server.ssrLoadModule('/src/pages/Dashboard.tsx')
+    const { PageInformationProvider, PageInformationButton } =
+      await server.ssrLoadModule('/src/components/PageInformation.tsx')
     const { Methodology } = await server.ssrLoadModule(
       '/src/pages/Methodology.tsx',
     )
@@ -197,14 +199,18 @@ test('workspace source entry, completion gates, zero results and exception revie
     const render = (component, props = {}, wizard = false, path) =>
       root.render(
         React.createElement(
-          MemoryRouter,
-          { key: path, initialEntries: path ? [path] : undefined },
+          PageInformationProvider,
+          null,
           React.createElement(
-            AppStoreContext.Provider,
-            { value: store },
+            MemoryRouter,
+            { key: path, initialEntries: path ? [path] : undefined },
             React.createElement(
-              React.Fragment,
-              null,
+              AppStoreContext.Provider,
+              { value: store },
+              React.createElement(PageInformationButton, {
+                page: 'Không gian làm việc',
+                scope: path ?? '/',
+              }),
               React.createElement(component, props),
               wizard ? React.createElement(OnboardingWizard) : null,
             ),
@@ -608,7 +614,20 @@ test('workspace source entry, completion gates, zero results and exception revie
             ).textContent,
             '0,00',
           )
-        assert.match(document.body.textContent, /Không xác định/)
+        assert.doesNotMatch(
+          document.body.textContent,
+          /Δ \/ Flash: Không xác định/,
+        )
+        await act(async () =>
+          document.querySelector('[aria-label="Thông tin trang"]').click(),
+        )
+        assert.match(
+          document.querySelector('[role="dialog"]').textContent,
+          /Δ \/ Flash: Không xác định/,
+        )
+        await act(async () =>
+          document.querySelector('[aria-label="Đóng thông tin trang"]').click(),
+        )
         const runsBeforeTabs = processorRuns
         const snapshotBeforeTabs = store.getState().reconciliationData
         const rawPeriodBeforeTabs = store.getState().period

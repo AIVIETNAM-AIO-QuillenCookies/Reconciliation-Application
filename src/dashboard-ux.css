@@ -140,13 +140,13 @@
 }
 .dash-kpi {
   border-top-width: 2px;
-  min-height: 82px;
+  min-height: 66px;
   padding: 8px 11px;
   gap: 4px;
 }
 .dash-kpi h2,
 .dash-kpi h3 {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
 }
 .dash-kpi > .financial-value {
@@ -186,7 +186,7 @@
   flex: 1;
 }
 .dash-widget-title h2 {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 .dash-widget-title-button {
@@ -305,10 +305,10 @@
 }
 .dash-table {
   table-layout: fixed;
-  font-size: 11px;
+  font-size: 12px;
 }
 .dash-table th {
-  font-size: 10px;
+  font-size: 11px;
   white-space: normal;
   overflow-wrap: anywhere;
   padding: 7px 8px;
@@ -602,10 +602,11 @@ body:has(.dash-expanded-dialog) [data-slot='dialog-overlay'] {
 .dash-inspector .dash-table-scroll {
   overflow-x: visible;
 }
-@media (min-width: 1200px) and (min-height: 820px) {
+@media (min-width: 1100px) and (min-height: 620px) {
   .app-main.dashboard-suite-main {
     height: calc(100dvh - 56px);
     min-height: 0;
+    overflow: hidden;
   }
   .dashboard-suite {
     height: 100%;
@@ -645,7 +646,7 @@ body:has(.dash-expanded-dialog) [data-slot='dialog-overlay'] {
     grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-height: 819px), (max-width: 1199px) {
+@media (max-height: 619px), (max-width: 1099px) {
   .app-main.dashboard-suite-main {
     height: auto;
     overflow: visible;
@@ -683,7 +684,7 @@ body:has(.dash-expanded-dialog) [data-slot='dialog-overlay'] {
     max-height: none;
   }
 }
-@media (min-width: 1200px) and (max-height: 819px) {
+@media (min-width: 1100px) and (max-height: 619px) {
   .dash-kpis {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }

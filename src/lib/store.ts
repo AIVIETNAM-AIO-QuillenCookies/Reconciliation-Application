@@ -16,6 +16,11 @@ import {
 } from './processing-progress.ts'
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
 import {
+  createConventionController,
+  initialConventionState,
+  type ConventionState,
+} from './convention-document.ts'
+import {
   REQUIRED_SOURCES,
   SOURCES,
   type QueuedFile,
@@ -76,6 +81,8 @@ export type ProcessingStatus =
   'idle' | 'waiting' | 'registering' | 'running' | 'ready' | 'error'
 export interface AppState {
   excelReference: ExcelReferenceState
+  /** Session-only recording-conventions document; never changes calculations. */
+  conventions: ConventionState
   files: QueuedFile[]
   mappingDrafts: MappingDrafts
   confirmedMappings: ConfirmedFileMapping[] | null
@@ -161,6 +168,7 @@ export function createAppStore(
 ) {
   let state: AppState = {
     excelReference: emptyExcelReference(),
+    conventions: initialConventionState(),
     files: [],
     mappingDrafts: {},
     confirmedMappings: null,
@@ -496,6 +504,10 @@ export function createAppStore(
       () => state.excelReference,
       (excelReference) => publish({ excelReference }),
     ),
+    ...createConventionController(
+      () => state.conventions,
+      (conventions) => publish({ conventions }),
+    ),
     updateReviewCase(id: string, patch: GLCasePatch) {
       const current = state.reviewCases.find((c) => c.id === id)
       if (!current) throw new Error('Không tìm thấy yêu cầu rà soát.')
@@ -829,6 +841,15 @@ export function createAppStore(
         onboardingStep: firstIncompleteStep(state.files, state.mappingDrafts),
       })
     },
+    /** Independent GL source preview; callers still use the normal review validation. */
+    setReviewSnapshot(snapshot: GLReviewSnapshot) {
+      if (state.status === 'running' || state.status === 'registering')
+        throw new Error('Chờ tác vụ xử lý kết thúc trước khi mở snapshot GL.')
+      publish({
+        glReview: snapshot,
+        reviewCases: synchronizeReviewCases(snapshot, state.reviewCases),
+      })
+    },
     closeOnboarding() {
       publish({ onboardingOpen: false })
     },
@@ -877,6 +898,7 @@ export function createAppStore(
           entry.source !== '' &&
           previous?.file === entry.file &&
           previous.source === entry.source &&
+          previous.sheetName === entry.sheetName &&
           (previous.headerRow ?? 1) === (entry.headerRow ?? 1) &&
           state.mappingDrafts[entry.id]
         ) {
@@ -912,6 +934,13 @@ export function createAppStore(
         ),
       )
     },
+    setSheetName(id: string, sheetName: string) {
+      const entry = state.files.find((file) => file.id === id)
+      if (!entry || entry.sheetName === sheetName) return
+      actions.setFiles((files) =>
+        files.map((file) => (file.id === id ? { ...file, sheetName } : file)),
+      )
+    },
     setFilePreview(
       id: string,
       file: File,
@@ -924,6 +953,7 @@ export function createAppStore(
         !entry ||
         entry.file !== file ||
         entry.source !== source ||
+        (entry.sheetName && entry.sheetName !== preview.sheetName) ||
         (entry.headerRow ?? 1) !== (preview.headerRow ?? 1)
       )
         return

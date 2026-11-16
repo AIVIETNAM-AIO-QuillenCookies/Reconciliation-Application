@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { EvidenceTable } from '@/components/methodology/EvidenceTable'
 import { SelectionInspector } from '@/components/methodology/SelectionInspector'
 import { useAppStore } from '@/lib/store'
+import { InformationNote } from '@/components/PageInformation'
 import { ReferenceTables } from '@/components/excel-reference/ReferenceViews'
 import { viMessage } from '@/lib/i18n'
 import {
@@ -64,16 +65,16 @@ function DataPanels({
                   <button
                     type="button"
                     key={item.id}
+                    data-tour={`processing-table-${item.id}`}
                     aria-current={item.id === table.id ? 'true' : undefined}
                     onClick={() => changeTable(item.id)}
                   >
                     {posBranchLabel(item.id) !== item.id
                       ? posBranchLabel(item.id)
                       : viMessage(item.label)}
-                    <small>
-                      {item.rowCount.toLocaleString('vi-VN')} dòng ·{' '}
-                      {item.rows.length} dòng đã giữ
-                    </small>
+                    <span className="processing-table-count">
+                      {item.rowCount.toLocaleString('vi-VN')} dòng
+                    </span>
                   </button>
                 ))}
               </section>
@@ -81,7 +82,12 @@ function DataPanels({
           )
         })}
       </nav>
-      <div className="processing-data-main">
+      <div
+        className="processing-data-main"
+        data-tour="processing-table"
+        data-table-id={table.id}
+        data-row-count={table.rowCount}
+      >
         <EvidenceTable
           evidence={evidence}
           table={table}
@@ -127,15 +133,14 @@ export function DataProcessing() {
       (requestedSheet !== null && sheet === undefined))
   )
     return (
-      <section className="excel-reference-view viewport-workspace">
+      <section className="excel-reference-view reference-processing viewport-workspace">
         <header className="excel-reference-heading">
           <div>
             <h1>Xử lý dữ liệu</h1>
-            <p>{result.workbook.fileName}</p>
+            <InformationNote title="Nguồn dữ liệu xử lý">
+              {result.workbook.fileName}
+            </InformationNote>
           </div>
-          <span className="excel-reference-badge">
-            Kết quả tham chiếu Excel
-          </span>
         </header>
         <div className="excel-reference-panel">
           <p className="excel-reference-empty">
@@ -191,19 +196,20 @@ function RawDataProcessing() {
   )
   return (
     <section
+      data-tour="processing-workspace"
+      data-processing-status={store.status}
+      data-processing-run={evidence?.runId}
       className="mw-workspace viewport-workspace processing-workspace"
       aria-label="Xử lý dữ liệu"
     >
       <header className="workspace-page-heading">
         <div>
-          <p className="mb-1 text-xs font-medium text-primary">
-            Snapshot của phiên xử lý
-          </p>
           <h1 className="text-[26px] font-semibold tracking-tight">
             Xử lý dữ liệu
           </h1>
         </div>
         <Button
+          data-tour="processing-progress"
           variant="outline"
           size="sm"
           onClick={store.openProcessingPanel}
@@ -213,10 +219,14 @@ function RawDataProcessing() {
           Xem tiến trình
         </Button>
       </header>
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-xs">
-        <span>
-          {store.period.start} → {store.period.end} · USD
-        </span>
+      <InformationNote title="Phạm vi dữ liệu xử lý">
+        <p>
+          Kỳ báo cáo: {store.period.start} → {store.period.end}. Đơn vị tiền tệ:
+          USD.
+        </p>
+        {evidence && <p>Snapshot của phiên xử lý {evidence.runId}.</p>}
+      </InformationNote>
+      <div className="processing-run-state">
         <span className="flex items-center gap-1.5 text-muted-foreground">
           <Database className="size-3.5" />
           {store.status === 'ready' && evidence
@@ -291,12 +301,14 @@ function RawDataProcessing() {
               <PosDiagnosticsView diagnostics={evidence.posDiagnostics} />
             </details>
           )}
-          <p className="shrink-0 text-[11px] leading-5 text-muted-foreground">
-            Giữ tối đa {evidence.previewLimit} dòng mỗi bảng từ cùng phiên chạy.
-            Tìm kiếm và lọc chỉ áp dụng cho các dòng đã giữ. Các relation SQL
-            tạm đã được cleanup; đây là preview để kiểm chứng, không phải toàn
-            bộ dữ liệu hay bảng lưu bền.
-          </p>
+          <InformationNote title="Giới hạn dữ liệu xem trước">
+            <p>
+              Giữ tối đa {evidence.previewLimit} dòng mỗi bảng từ cùng phiên
+              chạy. Tìm kiếm và lọc chỉ áp dụng cho các dòng đã giữ. Các
+              relation SQL tạm đã được cleanup; đây là preview để kiểm chứng,
+              không phải toàn bộ dữ liệu hay bảng lưu bền.
+            </p>
+          </InformationNote>
           <DataPanels
             key={`${evidence.runId}:${resolved.table.id}`}
             evidence={evidence}

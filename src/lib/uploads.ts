@@ -14,6 +14,8 @@ export interface QueuedFile {
   sample?: boolean
   /** One-based source row containing column names. Defaults to the first row. */
   headerRow?: number
+  /** Explicit fact worksheet; omitted preserves the first-sheet import default. */
+  sheetName?: string
 }
 
 export function fileKey(file: File): string {

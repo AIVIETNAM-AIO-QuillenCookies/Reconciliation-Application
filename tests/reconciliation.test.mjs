@@ -1915,3 +1915,75 @@ test('non-default CSV header rows use the same record selection for preview and 
   assert.equal(result.rowCounts.Flash, 1)
   assertClean()
 })
+
+async function webCurrencyWizardFixture(currency, namedUSD = false) {
+  const { selected, configuration } = mappedWizardFixture()
+  const web = selected.find((entry) => entry.source === 'WEB')
+  const mapping = configuration.find((entry) => entry.source === 'WEB')
+  const text = await web.file.text()
+  let csv = text
+    .trimEnd()
+    .split('\n')
+    .map((line, index) => `${line},${index ? currency : 'currency'}`)
+    .join('\n')
+  mapping.columns.currency = 'currency'
+  if (namedUSD) {
+    for (const [field, name] of [
+      ['gross_amount', 'Selected gross USD'],
+      ['discount', 'Selected discount USD'],
+      ['net_amount', 'Selected net USD'],
+    ]) {
+      csv = csv.replace(mapping.columns[field], name)
+      mapping.columns[field] = name
+    }
+  }
+  web.file = new File([csv], 'WEB.csv')
+  return { selected, configuration }
+}
+
+test('WEB FX guard rejects mapped non-USD generic amounts before producing financial results', async () => {
+  const { selected, configuration } = await webCurrencyWizardFixture('EUR')
+  let failure
+  await assert.rejects(
+    accountingEngine().processUploads(selected, SAMPLE_PERIOD, {
+      columnMappings: configuration,
+      onFailure: (diagnostic) => {
+        failure = diagnostic
+      },
+    }),
+    /\[WEB_FX_NOT_SUPPORTED\]/,
+  )
+  assert.equal(failure.source, 'WEB')
+  assert.match(failure.originalMessage, /không thể coi nội tệ là USD/)
+  assertClean()
+})
+
+test('WEB FX guard accepts explicitly USD mapped amounts when source currency describes non-USD money', async () => {
+  const { selected, configuration } = await webCurrencyWizardFixture(
+    'EUR',
+    true,
+  )
+  const result = await accountingEngine().processUploads(
+    selected,
+    SAMPLE_PERIOD,
+    { columnMappings: configuration },
+  )
+  assert.deepEqual(result.rowCounts, { POS: 1, WEB: 1, GL: 1, Flash: 1 })
+  assert.equal(result.Flash_Sales, 180)
+  assert.equal(result.GL_Finance, 150)
+  assert.equal(result.Unexplained, 0)
+  assertClean()
+})
+
+test('WEB FX guard accepts generic mapped amounts when the source currency is USD', async () => {
+  const { selected, configuration } = await webCurrencyWizardFixture('USD')
+  const result = await accountingEngine().processUploads(
+    selected,
+    SAMPLE_PERIOD,
+    { columnMappings: configuration },
+  )
+  assert.equal(result.Flash_Sales, 180)
+  assert.equal(result.GL_Finance, 150)
+  assert.equal(result.Unexplained, 0)
+  assertClean()
+})

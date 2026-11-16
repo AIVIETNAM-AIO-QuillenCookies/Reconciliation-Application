@@ -1,11 +1,5 @@
 import { useState } from 'react'
-import {
-  FileSpreadsheet,
-  ArrowUpRight,
-  ShieldCheck,
-  Link2,
-  Info,
-} from 'lucide-react'
+import { FileSpreadsheet, ArrowUpRight, Link2, Info } from 'lucide-react'
 import { vi, viMessage } from '@/lib/i18n'
 import { useAppStore } from '@/lib/store'
 import { ONBOARDING_STEPS } from '@/lib/onboarding'
@@ -21,6 +15,7 @@ import type { RunEvidence } from '@/lib/reconciliation-evidence'
 import type { WorkspaceSelection } from '@/lib/model-workspace'
 import type { Source } from '@/lib/uploads'
 import { ReferenceSummary } from './ReferenceSummary'
+import { InformationNote } from '@/components/PageInformation'
 
 const sourceRelations = {
   POS: 'raw_pos',
@@ -73,8 +68,7 @@ export function SourcesAndJoins({
         role="region"
         aria-label="Source inventory and table dictionary"
       >
-        <div className="mw-source-notice">
-          <ShieldCheck size={15} />
+        <InformationNote title="Nguồn cấu hình đang xem">
           <p>
             {evidence
               ? vi(
@@ -84,7 +78,7 @@ export function SourcesAndJoins({
                   'Current files and mapping drafts are shown below. They are not processed results.',
                 )}
           </p>
-        </div>
+        </InformationNote>
         {selectedFiles.length ? (
           <div className="mw-source-files">
             {selectedFiles.map((file) => {
@@ -316,21 +310,21 @@ export function SourcesAndJoins({
               </button>
             ))}
         </div>
-        <h2 className="mw-source-section-title">{vi('Report reference')}</h2>
-        <p className="mw-source-reference-note">
-          Báo cáo đối soát doanh thu · eDA_Sale, We Analyze.{' '}
-          {vi(
-            'Page references are supplied by the user; the original PDF is not included or independently verified. Report QC totals are never runtime results.',
-          )}
-        </p>
-        <ul className="mw-source-references">
-          {reportReferences.map((reference) => (
-            <li key={reference.id}>
-              <strong>{reference.pages}</strong>
-              <span>{vi(reference.scope)}</span>
-            </li>
-          ))}
-        </ul>
+        <InformationNote title={vi('Report reference')}>
+          <p>
+            Báo cáo đối soát doanh thu · eDA_Sale, We Analyze. Các chỉ tiêu QC
+            trong báo cáo không thay thế kết quả kiểm tra của phiên dữ liệu đang
+            xem.
+          </p>
+          <ul className="mw-source-references">
+            {reportReferences.map((reference) => (
+              <li key={reference.id}>
+                <strong>{reference.pages}</strong>
+                <span>{vi(reference.scope)}</span>
+              </li>
+            ))}
+          </ul>
+        </InformationNote>
       </div>
     </section>
   )

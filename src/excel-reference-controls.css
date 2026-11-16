@@ -4,13 +4,13 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px 12px;
-  padding: 6px 12px;
-  margin-bottom: 8px;
-  border: 1px solid var(--border);
+  gap: 8px 14px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  border: 1px solid #dfe9de;
   border-left: 3px solid var(--primary);
-  border-radius: 8px;
-  background: var(--accent);
+  border-radius: 10px;
+  background: #edf4ec;
   font-size: 11px;
   overflow-wrap: anywhere;
 }
@@ -25,28 +25,31 @@
 }
 .excel-source-identity strong {
   white-space: nowrap;
+  color: #60815e;
+  font-size: 11px;
+  font-weight: 600;
 }
 .excel-source-filename {
   min-width: 0;
-  max-width: 270px;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--foreground);
+  color: #6d7f68;
 }
 .excel-source-basis {
-  color: var(--muted-foreground);
+  color: #8a9b81;
   white-space: nowrap;
 }
 .excel-source-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .excel-source-actions button {
   white-space: normal;
   height: auto;
-  min-height: 28px;
+  min-height: 30px;
   font-size: 11px;
 }
 .excel-reference-source-details {

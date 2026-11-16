@@ -389,6 +389,19 @@
   border-radius: 12px;
   background: white;
 }
+.processing-run-state {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  font-size: 12px;
+}
+.processing-table-count {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 @media (max-width: 1199px), (max-height: 650px) {
   .processing-workspace {
     height: auto;
@@ -473,5 +486,29 @@
   .configuration-progress .progress-view {
     max-height: none;
     height: 480px;
+  }
+}
+@media (min-width: 1024px) and (min-height: 600px) {
+  .processing-workspace {
+    flex: 1 1 0;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    gap: 8px;
+  }
+  .processing-data-panels {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .processing-data-inspector {
+    min-height: 0;
+    max-height: none;
+    overflow: auto;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1199px) and (min-height: 600px) {
+  .processing-data-panels {
+    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(120px, 0.45fr);
   }
 }

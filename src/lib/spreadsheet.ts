@@ -2,8 +2,19 @@ import * as XLSX from 'xlsx'
 import type { DecodedSheet } from './spreadsheet-types.ts'
 import { HeaderRowError, validateHeaderRow } from './header-row.ts'
 import { normalizeSpreadsheetValues } from './spreadsheet-values.ts'
+import { cachedWorkbook } from './workbook-cache.ts'
 
-function readWorkbook(buffer: ArrayBuffer): XLSX.WorkBook {
+/** Accept the engine's File context as well as an already parsed guide workbook. */
+function resolveWorkbook(
+  buffer: ArrayBuffer,
+  source?: XLSX.WorkBook | File,
+): XLSX.WorkBook {
+  if (source && 'SheetNames' in source && Array.isArray(source.SheetNames))
+    return source as XLSX.WorkBook
+  return cachedWorkbook(source as File | undefined) ?? readWorkbook(buffer)
+}
+
+export function readWorkbook(buffer: ArrayBuffer): XLSX.WorkBook {
   const signature = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength))
   // SheetJS also accepts plaintext. Do not silently treat a broken .xlsx as CSV.
   if (signature.length < 4 || signature[0] !== 0x50 || signature[1] !== 0x4b)
@@ -18,7 +29,7 @@ function readWorkbook(buffer: ArrayBuffer): XLSX.WorkBook {
   })
 }
 
-function sheetCSV(
+export function sheetCSV(
   sheet: XLSX.WorkSheet,
   headerRow: number,
   date1904 = false,
@@ -32,17 +43,21 @@ function sheetCSV(
   })
 }
 
-/** Revenue workbooks use the first worksheet, including GL and Flash exports. */
+/** Fact imports use the chosen worksheet, defaulting to the first for existing callers. */
 export async function workbookToCSV(
   buffer: ArrayBuffer,
   signal?: AbortSignal,
   headerRow = 1,
   format: 'csv' | 'xlsx' = 'xlsx',
+  sheetName?: string,
+  parsedWorkbook?: XLSX.WorkBook | File,
 ): Promise<string> {
   signal?.throwIfAborted()
   if (format === 'csv') return csvFromHeaderRow(buffer, headerRow)
-  const workbook = readWorkbook(buffer)
-  const first = workbook.SheetNames[0]
+  const workbook = resolveWorkbook(buffer, parsedWorkbook)
+  const first = sheetName ?? workbook.SheetNames[0]
+  if (sheetName && !workbook.SheetNames.includes(sheetName))
+    throw new Error(`Selected worksheet no longer exists: ${sheetName}`)
   if (!first || !workbook.Sheets[first]?.['!ref'])
     throw new Error('The first worksheet is empty or missing.')
   const csv = sheetCSV(
@@ -60,8 +75,9 @@ export async function workbookToSheets(
   signal?: AbortSignal,
   headerRow = 1,
   selectedSheets?: Record<string, { headerRow: number }>,
+  parsedWorkbook?: XLSX.WorkBook | File,
 ): Promise<DecodedSheet[]> {
-  const workbook = readWorkbook(buffer)
+  const workbook = resolveWorkbook(buffer, parsedWorkbook)
   const sheets: DecodedSheet[] = []
   for (const name of Object.keys(selectedSheets ?? {}))
     if (!workbook.SheetNames.includes(name))

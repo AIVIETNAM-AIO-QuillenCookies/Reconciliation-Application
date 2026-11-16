@@ -10,8 +10,10 @@ import {
   type MasterRelationship,
 } from './master-data.ts'
 import type { FactSource } from './uploads.ts'
+import { quoteLiteral as sqlLiteral } from './sql-quoting.ts'
 
-export const sqlLiteral = (s: string) => `'${s.replaceAll("'", "''")}'`
+// `sqlLiteral` remains part of this module's public API for existing importers.
+export { sqlLiteral }
 const text = (s: string) => `NULLIF(TRIM(CAST(${s} AS VARCHAR)), '')`
 function periodSQL(s: string): string {
   return `COALESCE(strftime(${dateSQL(text(s))}, '%Y-%m'), CASE WHEN regexp_full_match(${text(s)}, '[0-9]{4}-[0-9]{2}') AND TRY_STRPTIME(${text(s)} || '-01', '%Y-%m-%d') IS NOT NULL THEN ${text(s)} WHEN regexp_full_match(${text(s)}, '[0-9]{6}') THEN strftime(TRY_STRPTIME(${text(s)}, '%Y%m'), '%Y-%m') END)`

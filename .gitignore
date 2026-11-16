@@ -19,9 +19,11 @@ dist-ssr
 .vercel/
 .aws/
 .npm-cache/
+.claude/settings.local.json
 
 # Generated audits, browser QA and local input/output files
 outputs/
+.tmp/
 .tmp-*/
 tmp/
 coverage/
@@ -41,3 +43,8 @@ reports/
 *.njsproj
 *.sln
 *.sw?
+
+# Office lock files (they record the Windows user name) and Windows metadata
+~$*
+Thumbs.db
+desktop.ini

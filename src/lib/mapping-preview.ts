@@ -9,6 +9,7 @@ function readPreviewWorkbook(
   extension: 'csv' | 'xlsx',
   allSheets = false,
   headerRow = 1,
+  sheetName?: string,
 ): XLSX.WorkBook {
   validateHeaderRow(headerRow)
   if (extension === 'xlsx') {
@@ -38,7 +39,7 @@ function readPreviewWorkbook(
     cellDates: false,
     cellNF: true,
     sheetRows: headerRow + 6,
-    sheets: allSheets ? undefined : 0,
+    sheets: allSheets ? undefined : (sheetName ?? 0),
   })
 }
 
@@ -47,20 +48,32 @@ export function parseMappingPreview(
   buffer: ArrayBuffer,
   extension: 'csv' | 'xlsx',
   headerRow = 1,
+  sheetName?: string,
 ): FilePreview {
-  const workbook = readPreviewWorkbook(buffer, extension, false, headerRow)
-  const name = workbook.SheetNames[0]
+  const workbook = readPreviewWorkbook(
+    buffer,
+    extension,
+    false,
+    headerRow,
+    sheetName,
+  )
+  const name = sheetName ?? workbook.SheetNames[0]
+  if (sheetName && !workbook.SheetNames.includes(sheetName))
+    throw new Error(`Selected worksheet no longer exists: ${sheetName}`)
   const sheet = workbook.Sheets[name]
   if (!sheet?.['!ref'])
     throw new HeaderRowError(
       'The first worksheet is empty. Add a header row and try again.',
     )
-  return sheetPreview(
-    sheet,
-    extension === 'xlsx' ? name : null,
-    headerRow,
-    !!workbook.Workbook?.WBProps?.date1904,
-  )
+  return {
+    ...sheetPreview(
+      sheet,
+      extension === 'xlsx' ? name : null,
+      headerRow,
+      !!workbook.Workbook?.WBProps?.date1904,
+    ),
+    sheetNames: workbook.SheetNames,
+  }
 }
 
 /** Dimensions keep every non-empty sheet, using bounded samples of each. */
@@ -103,7 +116,7 @@ export function parseDimMappingPreviews(
   return previews
 }
 
-function sheetPreview(
+export function sheetPreview(
   sheet: XLSX.WorkSheet,
   sheetName: string | null,
   headerRow: number,

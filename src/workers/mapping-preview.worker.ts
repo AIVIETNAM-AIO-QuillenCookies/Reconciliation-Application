@@ -32,7 +32,14 @@ scope.onmessage = ({ data }) => {
               data.headerRow,
               data.sheetName,
             )
-          : [parseMappingPreview(data.buffer, data.extension, data.headerRow)],
+          : [
+              parseMappingPreview(
+                data.buffer,
+                data.extension,
+                data.headerRow,
+                data.sheetName,
+              ),
+            ],
     })
   } catch (error) {
     scope.postMessage({

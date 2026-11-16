@@ -280,6 +280,8 @@ export const MAPPING_FIELDS: Record<FactSource, readonly MappingField[]> = {
 }
 
 export interface FilePreview {
+  /** Workbook inventory, independent of the selected fact worksheet. */
+  sheetNames?: string[]
   error?: string
   headers: string[]
   /** Display text, before any date or currency normalization. At most five rows. */

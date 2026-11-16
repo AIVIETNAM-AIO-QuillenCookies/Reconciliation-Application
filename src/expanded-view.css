@@ -1,0 +1,137 @@
+/* Expanded (“Phóng to”) views float above a dimmed, blurred page. */
+.expand-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(18 47 38 / 42%);
+  backdrop-filter: blur(5px) saturate(0.85);
+  animation: expand-fade 160ms ease-out;
+}
+.is-expanded-view {
+  position: fixed !important;
+  inset: 3dvh 2vw;
+  z-index: 46;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgb(18 47 38 / 8%),
+    0 32px 80px -24px rgb(18 47 38 / 55%);
+  animation: expand-rise 180ms ease-out;
+}
+/* Raw workspace: title, tabs and close share the top row; the run-context
+   row is hidden so the panels get the height. */
+.mw-workspace.is-expanded-view {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  column-gap: 28px;
+  row-gap: 0;
+  padding: 10px 16px 16px 20px;
+  background: var(--background);
+}
+.mw-workspace.is-expanded-view > .mw-heading {
+  grid-area: 1 / 1;
+  padding: 0;
+}
+.mw-workspace.is-expanded-view > .mw-heading h1 {
+  font-size: 20px;
+  white-space: nowrap;
+}
+.mw-workspace.is-expanded-view .mw-page-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.mw-workspace.is-expanded-view > .mw-navigation {
+  grid-area: 1 / 2;
+  align-self: end;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mw-workspace.is-expanded-view > .mw-run-context {
+  display: none;
+}
+.mw-workspace.is-expanded-view > .mw-run-error {
+  grid-area: 2 / 1 / 3 / -1;
+  margin-top: 10px;
+}
+.mw-workspace.is-expanded-view > .mw-workspace-body {
+  grid-area: 3 / 1 / 4 / -1;
+  margin-top: 12px;
+}
+.mw-workspace.is-expanded-view > .mw-expand-close {
+  grid-area: 1 / 3;
+  align-self: center;
+}
+.mw-expand-close {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  color: var(--muted-foreground);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+.mw-expand-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+@keyframes expand-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes expand-rise {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+@media (max-width: 760px) {
+  .is-expanded-view {
+    inset: 0;
+    border-radius: 0;
+  }
+  .mw-workspace.is-expanded-view {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    padding: 10px;
+  }
+  .mw-workspace.is-expanded-view > .mw-navigation {
+    grid-area: 2 / 1 / 3 / -1;
+  }
+  .mw-workspace.is-expanded-view > .mw-expand-close {
+    grid-area: 1 / 2;
+  }
+  .mw-workspace.is-expanded-view > .mw-run-error {
+    grid-area: 3 / 1 / 4 / -1;
+  }
+  .mw-workspace.is-expanded-view > .mw-workspace-body {
+    grid-area: 4 / 1 / 5 / -1;
+    margin-top: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .expand-backdrop,
+  .is-expanded-view {
+    animation: none;
+  }
+}
+@media print {
+  .expand-backdrop {
+    display: none !important;
+  }
+  .is-expanded-view {
+    position: static !important;
+    box-shadow: none;
+    animation: none;
+  }
+}

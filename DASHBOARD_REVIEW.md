@@ -1,5 +1,7 @@
 # Dashboard đối soát bốn trang
 
+Rà soát bổ sung ngày **13/11/2026**, commit `ed969a42233dfe191e6aac054a156c73ce8e55fc`. Tài liệu này mô tả cách trình bày kết quả; [bản đồ ứng dụng nghiên cứu](docs/RESEARCH_APPLICATION_MAP.md) phân biệt phạm vi triển khai, bằng chứng và phần còn thiếu. Các kết quả triển khai/kiểm thử của đợt trước bên dưới là ghi chép lịch sử; kết quả chạy lại trong lần này được tách ở phần Kiểm chứng.
+
 Dashboard nằm tại mục **Tổng quan** trên sidebar. Bốn tab dùng chung nguồn kết quả và bộ lọc: **Tổng quan**, **Cầu nối chênh lệch**, **Đối soát chi tiết**, **Hoàn trả & chất lượng**. Bộ lọc dashboard đọc snapshot hiện tại, không khởi chạy lại pipeline Raw. Dữ liệu nhập, ánh xạ, correction overlay, hồ sơ và ghi chú tiếp tục thuộc shared store của phiên.
 
 ## Tài liệu thực tế có trong phiên
@@ -16,6 +18,16 @@ Dashboard nằm tại mục **Tổng quan** trên sidebar. Bốn tab dùng chung
 - Waterfall bắt đầu từ Flash, cộng từng khoản điều chỉnh và kết thúc tại GL. Dòng tổng hoặc dòng kiểm tra không nằm trong mẫu số tỷ trọng điều chỉnh. Làm tròn chỉ dùng để hiển thị; Excel giữ độ chính xác USD gốc.
 - Không quy đổi USD tham chiếu Excel qua FX lần nữa. Tỷ lệ hàng trả cần tổng giá trị trả / tổng doanh thu online đã giao trong cùng phạm vi và cơ sở FX; không cộng hoặc lấy trung bình tỷ lệ tháng.
 - Quốc gia chỉ có thể lọc khi snapshot cung cấp phân bổ đáng tin cậy cho toàn phạm vi áp dụng. Có tiền tệ hoặc kênh không đủ để suy ra quốc gia.
+
+## Đường sử dụng đã đối chiếu với code
+
+- [DashboardSuite](src/components/dashboard/DashboardSuite.tsx) là component thực tế của trang Dashboard, đọc `activeResult` để chọn **Raw hoặc Excel**. Các tab, tháng, kênh và quốc gia nằm trong query URL; đổi bộ lọc chỉ gọi lại `buildDashboardModel`, không gọi processor. Thành phần `ReferenceDashboard` cũ vẫn còn, nay nằm riêng trong `ReferenceDashboard.tsx` và vẫn được xuất lại qua `ReferenceViews.tsx`; sự tồn tại của nó không phải bằng chứng rằng trang Dashboard hiện dùng thành phần đó.
+- [buildDashboardModel](src/lib/dashboard-model.ts) dùng snapshot Raw do `captureDashboardSnapshot` lấy từ cùng run để tính các tổng tháng, đối soát chi tiết và chất lượng. Truy vết khoản mục cầu nối Raw lại dựa trên `result.evidence.tables`, là mẫu bị giới hạn; không được dùng số dòng hiển thị này để tính lại tổng.
+- Excel dùng `Cau_noi` cho Flash, GL và các điều chỉnh; `Chi_tiet` cung cấp mã khoản, giao dịch, số lượng hủy/trả và dòng bị loại đã có sẵn. Inspector cầu nối giữ một dòng `Cau_noi` và tối đa **199 dòng chi tiết** trong kỳ, kèm nhãn cắt mẫu; màn hình bảng tham chiếu giữ toàn bộ dữ liệu được parser đọc. Không có bước chạy lại quy tắc Raw từ ba sheet này.
+- Ở cả hai nguồn, chọn một kênh làm trống Flash, Δ, cầu nối và các kiểm tra cầu nối vì thiếu phân bổ Flash theo kênh đã xác minh. Raw vẫn lọc GL theo kênh và các phần chi tiết phù hợp; Excel chỉ lọc được các chỉ tiêu chi tiết có `Kenh`. Bộ lọc quốc gia hiện chưa có dữ liệu áp dụng cho **cả Raw và Excel**, dù cấu hình Store Master có thể chứa quốc gia.
+- [Methodology](src/pages/Methodology.tsx) tách nhánh Excel sang `ReferenceMethodology`; nhánh Raw hiển thị sơ đồ, nguồn/joins, danh mục quy tắc và bằng chứng cùng run. [RecordProof](src/components/methodology/RecordProof.tsx) hiển thị đầu vào → logic → đầu ra đã giữ lại, không tính lại. [captureRunEvidence](src/lib/reconciliation-evidence.ts) giới hạn **50 dòng/bảng**, giữ tổng số dòng và cờ `truncated`; không có mẫu đầu vào thì màn hình ghi rõ thiếu.
+
+Các ngưỡng và biểu đồ minh họa một phần khuyến nghị [Memory.md, X.3.3–X.3.5](Memory.md#muc-x): không thay cho việc xác nhận đủ bút toán trước khóa sổ, duyệt bằng chứng hoặc quyết định phát hành. Biểu đồ hiển thị đúng kết quả Excel cũng không xác nhận pipeline Raw đã hoàn tất.
 
 ## Đối chiếu workbook thật
 
@@ -63,6 +75,10 @@ Thanh Excel được thu gọn, giữ tên file, nhãn phiên xem thử, thao t�
 Chế độ Excel không xác nhận bằng chứng, đóng hồ sơ hay ghi đè luồng Raw. Có mã chứng từ chưa đủ để đánh dấu bằng chứng đã được xác minh. Refresh vẫn xóa dữ liệu trong phiên theo lifecycle hiện có.
 
 ## Kiểm chứng
+
+Trong lần rà soát ngày 13/11/2026 đã chạy nhóm tám file kiểm thử Excel, session, dashboard và evidence: **42/42 đạt**. Lệnh và phạm vi cụ thể tại [EXCEL_REFERENCE_PREVIEW.md](EXCEL_REFERENCE_PREVIEW.md#kiểm-chứng). Nhóm này xác minh các tổng workbook, 58 kiểm tra số học, dấu GL − Flash, hạn chế nguồn, dữ liệu Raw cùng run, mẫu evidence và tương tác jsdom. Chưa kiểm chứng bằng trình duyệt thực, dữ liệu sản xuất hoặc bản deploy trong lần này.
+
+Các đoạn sau ghi lại kiểm chứng của đợt cải thiện dashboard trước đó:
 
 Đã chạy trực tiếp parser trên workbook thật và xác nhận các số đối chiếu, số dòng và toàn bộ 58 kiểm tra. `tests/excel-reference.test.mjs` đạt 9/9; `tests/excel-reference-ui.test.mjs` đạt 1/1; `tests/workspace-ui.test.mjs` đạt 11/11, gồm test cha và 10 trường hợp con. Kiểm thử tương tác xác nhận dấu GL − Flash, giữ bộ lọc khi chuyển đủ bốn tab, giữ source/snapshot/period Raw, không gọi lại processor khi lọc hoặc chuyển tab, truy vết file/sheet/dòng và quay lại đúng trạng thái Raw.
 

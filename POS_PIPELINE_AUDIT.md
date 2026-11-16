@@ -1,12 +1,49 @@
-# Kết quả sửa pipeline POS
+# Rà soát pipeline POS
 
-## Phạm vi bằng chứng
+## Trạng thái đối chiếu ngày 13/11/2026
 
-Đã sửa và kiểm tra source bằng DuckDB WASM đang được cài trong dự án; đồng thời đọc toàn bộ **8 workbook** ở các thư mục dự án `Submission 1/Excel` và `Data`, không sửa bản gốc. Tìm thấy POS Raw đầy đủ trong [POS_PowerQuery_QC.xlsx](<D:/edaAIVietNam/Module 1/Project/Submission 1/Excel/POS_PowerQuery_QC.xlsx>), sheet `POS_Sales_Export_2025`, range **A1:K17125**. Chạy lại projection/validator cũ trên toàn bộ dữ liệu đã tái hiện đúng **10.058 dòng lỗi**.
+Đối chiếu source tại commit `ed969a42233dfe191e6aac054a156c73ce8e55fc` (ứng dụng `0.1.0`). Lần cập nhật này chỉ sửa tài liệu. Bản đồ nghiên cứu và trạng thái kiểm chứng chung nằm tại [docs/RESEARCH_APPLICATION_MAP.md](docs/RESEARCH_APPLICATION_MAP.md).
 
-Snapshot mapping/header/period và Master workbook FX của chính phiên ứng dụng trước đó không được lưu trong các nguồn hiện có. Vì vậy phép tái hiện dùng **native projection cũ trên bảng Raw thực tế**, không giả nhận đã khôi phục cấu hình người dùng. Counts thực và fixture được tách riêng bên dưới. Chi tiết máy đọc được: [actual-pos-pipeline.json](outputs/pos-source-audit/actual-pos-pipeline.json); inventory, SHA256 và mã M đã giải nén: [corpus-inventory.json](outputs/pos-source-audit/corpus-inventory.json), [workbook-audit.json](outputs/pos-source-audit/workbook-audit.json).
+Phần này ghi nhận điều có thể xác định từ repository hiện tại. Các số liệu workbook và kết quả kiểm tra ở phần **Hồ sơ sửa lỗi lịch sử** bên dưới được giữ để tham khảo; chúng không phải kết quả chạy lại trong lần rà soát này. Các tệp `outputs/pos-source-audit/*` và workbook ở thư mục dự án bên ngoài không nằm trong repository được đối chiếu; chưa tái kiểm chứng các số liệu đó. [Memory.md](Memory.md) là báo cáo nghiên cứu đã có trong repository, cũng mô tả 17.124 dòng POS nguồn, 12 dòng xuất lặp và rủi ro fact Excel giữ cả dòng trùng (mục X.3.2). Không dùng nhận định về fact **Excel** đó cho fact **Raw của ứng dụng**.
 
-## Validator cũ và nguyên nhân xác nhận được trong code
+### Đường xử lý hiện có trong ứng dụng
+
+| Bước                  | Bằng chứng code                                                                                                                    | Hành vi và giới hạn                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Đọc nguồn             | [workbookToCSV / workbookToSheets](src/lib/spreadsheet.ts), [registerFiles](src/lib/ReconciliationEngine.ts)                       | POS, WEB, GL và Flash XLSX dùng **sheet đầu tiên**; người dùng chọn dòng tiêu đề, không có bộ chọn sheet bất kỳ cho các nguồn fact. Master/Dim cho chọn sheet theo vai trò và dòng tiêu đề riêng. CSV cũng hỗ trợ chọn dòng tiêu đề.                                                                                                                                          |
+| Ánh xạ                | [autoMapColumns / confirmedMappingSnapshot](src/lib/data-mapping.ts), [accountingProjection](src/lib/reconciliation-accounting.ts) | Gợi ý cột theo alias/độ tương đồng; người dùng xác nhận mapping. Tiền POS được hiểu là nguyên tệ theo tên cột local được nhận diện; net được map là USD có sẵn, kể cả bằng 0. Người dùng phải kiểm tra đúng cơ sở tiền tệ.                                                                                                                                                    |
+| Master/Dim            | [masterConfigurationIssues / masterReady](src/lib/master-data.ts), [buildMasterJoins](src/lib/master-joins.ts)                     | Một Master workbook, bốn vai trò Store, Calendar, FX Daily, FX Month End. Kiểm tra đầy đủ khóa, đầu ra, unmatched và số dòng trước/sau nối. POS loại khóa tham chiếu trùng khỏi phép join để giữ dòng nguồn kèm trạng thái lỗi; engine vẫn chặn trước khi công bố fact.                                                                                                       |
+| Staging               | [ACCOUNTING_POS_STAGING_SQL / POS_STAGING_ISSUES](src/lib/pos-pipeline-sql.ts), [execute](src/lib/ReconciliationEngine.ts)         | Chuẩn hóa khóa, ngày, timestamp, tiền; giữ giá trị gốc và vị trí nguồn. Lỗi staging dừng trước khi phân loại exports. `raw_pos` đã là projection chuẩn hóa, không phải bản sao nguyên trạng mọi cột file; payload `source_values` giữ các cột nguồn.                                                                                                                          |
+| Phân loại và cleaning | [ACCOUNTING_POS_CLASSIFICATION_SQL / ACCOUNTING_POS_CLEANING_SQL](src/lib/pos-pipeline-sql.ts)                                     | Khóa `receipt_no + line_no`; giữ bản xuất sớm nhất theo timestamp, sequence nguồn rồi thứ tự file/bản ghi. `q_POS_Dup_Keys` đếm cả nhóm; `q_POS_Dup_Rows` chỉ chứa bản bị loại. Cùng khóa khác nội dung sinh cảnh báo; code vẫn giữ bản sớm nhất, không chờ phê duyệt từng nhóm.                                                                                              |
+| Mapping và USD        | [ACCOUNTING_POS_MAPPING_SQL / ACCOUNTING_POS_CONVERSION_SQL](src/lib/pos-pipeline-sql.ts)                                          | Áp dụng lookup sau classification. `net_local = gross_local - discount_local`; USD = local / `usd_to_ccy`. Daily và Month End có cơ sở riêng. Nếu chưa cấu hình Month End thì dùng Daily cho net dẫn xuất; nếu đã cấu hình nhưng thiếu khóa thì không tự thay bằng Daily. Quy đổi local này có triển khai cho **POS**; WEB nhập tiền USD đã chuẩn bị, GL/Flash cũng dùng USD. |
+| Fact và kiểm tra      | [execute](src/lib/ReconciliationEngine.ts), [ACCOUNTING_POS_FACT_SQL](src/lib/pos-pipeline-sql.ts)                                 | Engine chỉ tạo `fact_POS_final` sau khi POS và reference qua kiểm tra. Kiểm tra duy nhất receipt/line và bảo toàn số dòng Cleaning = Mapped = USD = Fact; Cleaning + discarded = Raw. Gọi riêng mảng SQL tổng hợp trong unit test không thay thế các cổng kiểm tra của engine.                                                                                                |
+| Ghi nhận và đối soát  | [DAILY_SQL / bridgeSQL](src/lib/reconciliation-sql.ts)                                                                             | POS theo posting date đã map/Calendar/fallback business date. WEB giao ghi tăng, trả ghi giảm ở return date, hủy không ghi nhận. Tổng hợp hai vế theo store + posting date trước khi so. Bridge Raw có discount, hủy, timing, trả, duplicate và missing GL; residual FX không được phân loại riêng thành dòng FX đầy đủ.                                                      |
+
+### Giới hạn cần giữ rõ khi đọc báo cáo
+
+- [Memory.md](Memory.md) đề nghị kiểm soát ngày hoạt động/đóng cửa của Store Master; `ReferenceField` hiện không có `open_date` hay `close_date`, và không tìm thấy validator tự động kiểm tra POS tại cửa hàng đã đóng. Lookup đúng khóa chưa chứng minh hợp lệ theo thời gian hoạt động.
+- Quy tắc kỳ báo cáo trong [validatePeriod](src/lib/ReconciliationEngine.ts) yêu cầu tháng lịch đầy đủ vì Flash có grain tháng. Không tự suy ra lịch đóng sổ hoặc ngày hạch toán kế tiếp từ ngày nghỉ nếu chưa có Calendar và quan hệ được cấu hình.
+- Việc chọn dòng tiêu đề chỉ bỏ phần metadata trước tiêu đề. Chưa thấy bước loại riêng dòng `Total`/subtotal của Flash; người dùng cần cung cấp bảng chi tiết hợp lệ, tránh nạp cả tổng và chi tiết rồi cộng hai lần.
+- Dữ liệu nguồn lỗi không được tự sửa theo phỏng đoán. Thiếu FX, lookup không hợp lệ, WEB sai trạng thái/ngày, GL chưa hoàn tất chuẩn hóa hoặc thiếu một trong bốn nguồn có thể chặn kết quả Raw.
+- Giữ bản POS sớm nhất và ghi cảnh báo khác nội dung là quy tắc đã có code; quyết định nghiệp vụ xác minh bản nào là đúng vẫn cần người dùng và chưa có hàng chờ phê duyệt riêng cho xung đột POS.
+
+### Kiểm chứng có thể tái lập
+
+Các fixture có thật nằm trong [tests/pos-pipeline.test.mjs](tests/pos-pipeline.test.mjs), [tests/pos-calendar-fx.test.mjs](tests/pos-calendar-fx.test.mjs), [tests/master-data.test.mjs](tests/master-data.test.mjs), [tests/data-mapping.test.mjs](tests/data-mapping.test.mjs) và [tests/header-row.test.mjs](tests/header-row.test.mjs). Chúng kiểm tra export timestamp/tie breaker, dữ liệu local AUD, net USD bằng 0, FX thiếu/trùng/không hợp lệ, Calendar và bảo toàn số dòng. Fixture AUD hai exports 65,37 gross và 7,85 discount với rate Daily 1,5 / Month End 2 là dữ liệu kiểm thử; không phải số liệu thực của lần chạy Raw năm 2025.
+
+Phạm vi đọc code ở phần này: **Đã đối chiếu code; chưa kiểm chứng bằng chạy thử riêng**. Kết quả chạy bộ test trong lần rà soát được ghi tập trung ở [bản đồ nghiên cứu](docs/RESEARCH_APPLICATION_MAP.md); không lấy con số `170/170` lịch sử bên dưới làm số test hiện hành.
+
+## Hồ sơ sửa lỗi lịch sử (giữ để truy nguyên)
+
+Các đoạn dưới đây là nội dung audit đã có trước lần cập nhật tài liệu 13/11/2026. Các từ “đã chạy”, “đã kiểm tra” và số lượng workbook/test trong phần này mô tả hồ sơ cũ; chưa tái xác nhận độc lập workbook gốc, artifact JSON/M hoặc phiên cấu hình trong lần rà soát này.
+
+### Phạm vi bằng chứng lịch sử
+
+Hồ sơ cũ ghi đã sửa và kiểm tra source bằng DuckDB WASM; đồng thời đọc toàn bộ **8 workbook** ở các thư mục dự án `Submission 1/Excel` và `Data`, không sửa bản gốc. Nguồn ghi trong hồ sơ là `../Submission 1/Excel/POS_PowerQuery_QC.xlsx`, sheet `POS_Sales_Export_2025`, range **A1:K17125**. Hồ sơ ghi chạy lại projection/validator cũ trên toàn bộ dữ liệu đã tái hiện **10.058 dòng lỗi**; lần rà soát này chưa chạy lại nguồn bên ngoài đó.
+
+Snapshot mapping/header/period và Master workbook FX của chính phiên ứng dụng trước đó không được lưu trong các nguồn hiện có. Vì vậy phép tái hiện dùng **native projection cũ trên bảng Raw thực tế**, không giả nhận đã khôi phục cấu hình người dùng. Counts thực và fixture được tách riêng bên dưới. Hồ sơ dẫn các artifact `outputs/pos-source-audit/actual-pos-pipeline.json`, `corpus-inventory.json`, `workbook-audit.json`; các artifact này chưa có trong repository hiện tại để kiểm tra lại.
+
+### Validator cũ và nguyên nhân ghi nhận trong hồ sơ
 
 Thông báo cũ được khai báo trong `reconciliation-accounting.ts`, hằng `ACCOUNTING_POS_VALIDATION`. `ReconciliationEngine.ts` chạy validator này trên **`pos_clean`**, được tạo từ `raw_pos`; `raw_pos` là projection đã map, không phải toàn bộ cột Raw nguyên gốc.
 
@@ -46,14 +83,14 @@ Các sample thực từ cùng worksheet (ngày gốc hiển thị `1/1/25`, chu�
 
 Giá trị gốc đầy đủ, trường sau chuẩn hóa, file, sheet, record ordinal và dòng vật lý nằm trong JSON. Đây là samples dữ liệu thực, không phải fixture.
 
-## Duplicates và nguồn Fact
+### Duplicates và nguồn Fact
 
-Code ứng dụng trước sửa không có relation tên `fact_POS_final`; `vw_pos` đã lọc computed keeper rank. Tuy nhiên audit [cleaned_POS_Flagged_Duplicate.xlsx](<D:/edaAIVietNam/Module 1/Project/Submission 1/Excel/cleaned_POS_Flagged_Duplicate.xlsx>) phát hiện hai vấn đề cụ thể trong Power Query nguồn:
+Code ứng dụng trước sửa không có relation tên `fact_POS_final`; `vw_pos` đã lọc computed keeper rank. Tuy nhiên hồ sơ audit workbook ngoài repository `../Submission 1/Excel/cleaned_POS_Flagged_Duplicate.xlsx` ghi hai vấn đề cụ thể trong Power Query nguồn:
 
 - `q_POS_Dup_Rows` dùng INNER JOIN `q_POS_Flagged` với `q_POS_Dup_Keys` theo key, nên chứa **cả 24 thành viên** của 12 nhóm trùng, bao gồm keeper. Nó không phải tập 12 exports thực sự bị loại. Cache đối chiếu ở range `q_POS_Dup_Rows!A1:L25`; `q_POS_Dup_Keys!A1:B13`.
 - `q_POS_First_Export` chỉ `Table.Group(key)` và `List.Min(exported_at)`: **17.112 dòng key + timestamp**, chưa phải bảng transaction keeper đầy đủ. Range `q_POS_First_Export!A1:B17113`. Nếu join lại Raw chỉ bằng key mà không ràng buộc bản xuất/rank, cả hai exports có thể quay lại; đây là nguy cơ từ cấu trúc đã xác minh, chưa phải bằng chứng của một bước fact cụ thể.
 
-Dashboard cache có 12 discarded rows, đều CAD, trong `POS_Duplicates`, phân biệt với 24 group members của workbook Cleaning/Flagged. **Không workbook nào trong 8 file có query/sheet `q_POS_Cleaning`, `q_POS_USD`, `fact_POS_final`, hoặc Master Store/Calendar/FX**. Do đó chưa thể xác nhận Source/Merge/Expand của fact bên ngoài hoặc sửa trực tiếp query fact không được cung cấp. GL có tỷ giá trên journal; không tự dùng cột đó làm Master FX cho POS. M đã trích: [cleaned_POS_Flagged_Duplicate_Section1.m](outputs/pos-source-audit/cleaned_POS_Flagged_Duplicate_Section1.m).
+Dashboard cache có 12 discarded rows, đều CAD, trong `POS_Duplicates`, phân biệt với 24 group members của workbook Cleaning/Flagged. **Không workbook nào trong 8 file của hồ sơ cũ có query/sheet `q_POS_Cleaning`, `q_POS_USD`, `fact_POS_final`, hoặc Master Store/Calendar/FX**. Do đó hồ sơ chưa thể xác nhận Source/Merge/Expand của fact bên ngoài hoặc sửa trực tiếp query fact không được cung cấp. GL có tỷ giá trên journal; không tự dùng cột đó làm Master FX cho POS. Artifact M được ghi nhận là `outputs/pos-source-audit/cleaned_POS_Flagged_Duplicate_Section1.m` (chưa có trong repository hiện tại).
 
 Pipeline hiện có các dependency cụ thể và kiểm soát được:
 
@@ -80,7 +117,7 @@ Invariant trước đối soát:
 - Fact duy nhất theo receipt_no + line_no.
 - Không đưa discarded exports vào expected POS revenue.
 
-## Nguyên tệ, USD và bridge
+### Nguyên tệ, USD và bridge
 
 `net_local = line_amount - discount_amount`. Với `usd_to_ccy` là nguyên tệ trên một USD, `amount_usd = amount_local / usd_to_ccy`. Các tỷ giá phải đến từ workbook/sheet/cột và quan hệ FX đã xác nhận. Ngày/tháng và currency được kết hợp theo cấu hình; diagnostic sample giữ các khóa FX thực tế được dùng.
 
@@ -90,7 +127,7 @@ Posting date được map, lấy từ Calendar đã cấu hình hoặc fallback 
 
 Bridge giữ nguyên dấu: trừ discount của toàn bộ exports, rồi trừ **net** của discarded exports từ nhánh audit, tránh trừ discount hai lần. Duplicate impact dùng daily net; Fact recognition giữ cơ sở USD của nó. Chênh lệch cơ sở FX và các khoản chưa giải thích vẫn nằm ở residual thực, không bị ép về 0.
 
-## Counts thực tế sau khi chạy SQL đã sửa
+### Counts thực tế được ghi nhận trong hồ sơ cũ
 
 Đã chạy các stage POS đã sửa trên toàn bộ Raw tìm được, **không tự tạo cấu hình FX/Store/Calendar**. Đây là audit POS riêng, không phải một phiên đối soát hoàn thành:
 
@@ -110,7 +147,7 @@ Bridge giữ nguyên dấu: trừ discount của toàn bộ exports, rồi trừ
 
 Count thiếu FX và USD null cùng tác động lên một tập dòng; không cộng chúng. Tập USD candidate có đủ keeper về grain nhưng chưa đủ điều kiện tiền tệ để publish vào Fact. Không trình bày “Fact = 0” hoặc “FX đã kiểm tra hợp lệ” khi chưa có nguồn FX. Dữ liệu gốc được giữ nguyên.
 
-## Fixture kiểm thử phép quy đổi đầy đủ
+### Fixture kiểm thử phép quy đổi đầy đủ
 
 Fixture integration dùng **hai bản xuất của một receipt/line**, mỗi bản có gross 65,37 AUD, discount 7,85 AUD; Daily rate 1,5 và Month End rate 2. Đây là dữ liệu kiểm thử, không phải dữ liệu production của lỗi 10.058.
 
@@ -130,7 +167,7 @@ Fixture chẩn đoán thiếu FX: hai dòng AUD cùng khóa có net local hợp 
 
 Fixture lỗi Staging có một dòng đồng thời sai receipt, line, store, business date, posting date và timestamp: báo **1 dòng lỗi**, dừng trước classification, không trình bày USD chưa chạy như một lỗi quy đổi đã kiểm tra.
 
-## Giao diện và kiểm chứng
+### Giao diện và kiểm chứng lịch sử
 
 Progress hiển thị các bước phân loại, Cleaning, mapping, quy đổi và kiểm tra đầu ra theo SQL thực sự chạy. Workspace mở riêng Raw, Cleaning, Duplicates, Duplicate Impact, USD, Fact và diagnostic cùng run ID. Báo cáo lỗi giữ counts, samples gốc/chuẩn hóa, tên file, record ordinal và dòng vật lý khi xác định được chính xác. Nếu không xác định được tọa độ, UI ghi rõ thay vì lấy ordinal cộng offset.
 

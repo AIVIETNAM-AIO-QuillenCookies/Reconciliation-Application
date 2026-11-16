@@ -71,6 +71,9 @@ export function getDuckDB(): Promise<duckdb.AsyncDuckDB> {
   return databasePromise
 }
 
+/** A guide owns its own worker and SQL relations, separate from the real workspace. */
+export const createIsolatedDuckDB = initialize
+
 /**
  * Low-level file registration for callers outside the reconciliation pipeline.
  * This neither parses the file nor creates a SQL table. Callers own file cleanup;
